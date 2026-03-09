@@ -4,21 +4,23 @@ import { teacherService } from '../services/teacherService';
 import type { Teacher } from '../services/teacherService';
 import TeacherProfile from '../components/TeacherProfile';
 import { ChevronLeft, ArrowRight, Calendar, Star } from 'lucide-react';
+import { useLanguage } from '../i18n';
+import LanguageSelector from '../components/LanguageSelector';
 
 const ProfilePage = () => {
     const { id } = useParams<{ id: string }>();
     const [teacher, setTeacher] = useState<Teacher | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
+    const { t } = useLanguage();
 
     useEffect(() => {
         const fetchTeacher = async () => {
             try {
-                // If no ID, get the first one for the demo
                 const list = await teacherService.getTeachers();
                 if (id) {
-                    const t = list.find(x => x.id === id);
-                    setTeacher(t || list[0]);
+                    const found = list.find(x => x.id === id);
+                    setTeacher(found || list[0]);
                 } else {
                     setTeacher(list[0]);
                 }
@@ -34,14 +36,14 @@ const ProfilePage = () => {
 
     if (loading) return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50">
-            <div className="text-2xl font-black text-indigo-600 animate-pulse uppercase tracking-widest">Loading Educator...</div>
+            <div className="text-2xl font-black text-indigo-600 animate-pulse uppercase tracking-widest">{t('profile.loading')}</div>
         </div>
     );
 
     if (error || !teacher) return (
         <div className="flex items-center justify-center min-h-screen bg-gray-50 flex-col gap-6 p-8">
-            <h1 className="text-4xl font-black text-red-500 shadow-md p-4 bg-white rounded-xl">Educator Not Found</h1>
-            <Link to="/" className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-full transition-all hover:bg-indigo-700 shadow-lg">Return to Base</Link>
+            <h1 className="text-4xl font-black text-red-500 shadow-md p-4 bg-white rounded-xl">{t('profile.notFound')}</h1>
+            <Link to="/" className="px-8 py-3 bg-indigo-600 text-white font-bold rounded-full transition-all hover:bg-indigo-700 shadow-lg">{t('profile.returnHome')}</Link>
         </div>
     );
 
@@ -51,7 +53,7 @@ const ProfilePage = () => {
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <Link to="/" className="text-gray-500 hover:text-indigo-600 transition flex items-center gap-1 font-bold tracking-tight">
                         <ChevronLeft size={20} />
-                        Back to Browsing
+                        {t('profile.back')}
                     </Link>
                     <div className="flex items-center gap-4">
                         <div className="hidden md:flex items-center gap-1 text-yellow-500">
@@ -60,8 +62,9 @@ const ProfilePage = () => {
                             <Star size={18} fill="currentColor" />
                             <Star size={18} fill="currentColor" />
                             <Star size={18} fill="currentColor" />
-                            <span className="text-gray-500 font-bold ml-1">(4.9)</span>
+                            <span className="text-gray-500 font-bold ml-1">{t('profile.rating')}</span>
                         </div>
+                        <LanguageSelector />
                     </div>
                 </div>
             </header>
@@ -70,11 +73,11 @@ const ProfilePage = () => {
                 <TeacherProfile teacher={teacher} />
 
                 <div className="mt-16 text-center">
-                    <h3 className="text-4xl font-black text-gray-900 mb-6 drop-shadow-sm">Ready to Speak Spanish?</h3>
-                    <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto font-medium">Book a session with {teacher.name} and start your journey today. Most students speak their first full sentence in just one hour.</p>
+                    <h3 className="text-4xl font-black text-gray-900 mb-6 drop-shadow-sm">{t('profile.cta.title')}</h3>
+                    <p className="text-lg text-gray-600 mb-10 max-w-xl mx-auto font-medium">{t('profile.cta.subtitle', { name: teacher.name })}</p>
                     <Link to={`/book/${teacher.id}`} className="inline-flex items-center gap-4 px-12 py-6 bg-indigo-600 text-white text-2xl font-black rounded-3xl hover:bg-indigo-700 transition-all shadow-2xl hover:shadow-indigo-400/40 hover:-translate-y-1 active:scale-95 group">
                         <Calendar size={28} />
-                        Schedule Lesson
+                        {t('profile.cta.button')}
                         <ArrowRight size={28} className="transition-transform group-hover:translate-x-1" />
                     </Link>
                 </div>

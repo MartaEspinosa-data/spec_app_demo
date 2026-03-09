@@ -3,6 +3,8 @@
 Auto-generated from all feature plans. Last updated: 2026-03-09
 
 ## Active Technologies
+- TypeScript (React frontend), Python 3.x (backend — no changes required) + React, react-router-dom, Vite, Tailwind CSS v4 (002-multilanguage-ui)
+- localStorage (browser-side persistence only — no database changes) (002-multilanguage-ui)
 
 - Python 3.11+ / Node.js 20+ (React 18+) + FastAPI (Backend), React (Frontend), Axios, React-Query, Stripe-Python, Calendly API (001-platform-mvp)
 
@@ -23,6 +25,7 @@ cd src; pytest; ruff check .
 Python 3.11+ / Node.js 20+ (React 18+): Follow standard conventions
 
 ## Recent Changes
+- 002-multilanguage-ui: Added TypeScript (React frontend), Python 3.x (backend — no changes required) + React, react-router-dom, Vite, Tailwind CSS v4
 
 - 001-platform-mvp: Added Python 3.11+ / Node.js 20+ (React 18+) + FastAPI (Backend), React (Frontend), Axios, React-Query, Stripe-Python, Calendly API
 

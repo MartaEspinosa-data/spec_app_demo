@@ -5,11 +5,55 @@ from app.models import lesson as models
 from app.models import student as student_models
 from app.models import teacher as teacher_models
 from app.schemas import lesson as schemas
+from datetime import datetime, time, timedelta, date as date_type
 import stripe
 import os
 
 router = APIRouter(prefix="/api/lessons", tags=["lessons"])
 stripe.api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
+
+def get_slots_for_day(db: Session, teacher_id: str, target_date: date_type):
+    # Working hours: 09:00 to 17:00
+    start_hour = 9
+    end_hour = 17
+    slots = []
+    
+    current_time = datetime.combine(target_date, time(start_hour))
+    end_working_time = datetime.combine(target_date, time(end_hour))
+    
+    print(f"Calculating slots for {teacher_id} on {target_date}")
+    
+    # Get existing scheduled lessons for this day
+    existing_lessons = db.query(models.Lesson).filter(
+        models.Lesson.teacher_id == teacher_id,
+        models.Lesson.start_time >= current_time,
+        models.Lesson.start_time < end_working_time + timedelta(hours=1),
+        models.Lesson.status == "scheduled"
+    ).all()
+    
+    occupied_starts = {l.start_time for l in existing_lessons}
+    print(f"Occupied slots: {occupied_starts}")
+    
+    while current_time < end_working_time:
+        if current_time not in occupied_starts:
+            slots.append(current_time.isoformat())
+        current_time += timedelta(hours=1)
+        
+    print(f"Generated slots: {len(slots)}")
+    return slots
+
+@router.get("/slots")
+def get_available_slots(teacher_id: str, date: str, db: Session = Depends(database.get_db)):
+    print(f"Inbound slot request: teacher_id={teacher_id}, date='{date}'")
+    try:
+        # Strip any accidental quotes or whitespace
+        clean_date = date.strip("'\" ")
+        target_date = datetime.strptime(clean_date, "%Y-%m-%d").date()
+        slots = get_slots_for_day(db, teacher_id, target_date)
+        return {"slots": slots}
+    except Exception as e:
+        print(f"Slot error: {str(e)}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format '{date}'. Exception: {str(e)}")
 
 @router.post("/", response_model=dict)
 def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.get_db)):

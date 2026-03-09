@@ -1,22 +1,22 @@
 from app.database import database
-from app.models import teacher as models
+from app.models import teacher, lesson, student
 from sqlalchemy.orm import Session
 
 def seed():
-    # Create tables
-    models.Base.metadata.create_all(bind=database.engine)
+    # Create tables - this will use the Base from the imported models
+    teacher.Base.metadata.create_all(bind=database.engine)
     
     db: Session = database.SessionLocal()
     
     # Check if we already have teachers
-    if db.query(models.Teacher).count() > 0:
+    if db.query(teacher.Teacher).count() > 0:
         print("Database already seeded. Skipping.")
         return
 
     # Add a demo teacher
-    demo_teacher = models.Teacher(
-        name="Profesor Mateo",
-        bio="""¡Hola! I am Mateo, a specialized Spanish teacher for English speakers. 
+    demo_teacher = teacher.Teacher(
+        name="Profe Marta",
+        bio="""¡Hola! I am Marta, a specialized Spanish teacher for English speakers. 
         With over 10 years of experience, I focus on 'Total Immersion' techniques that get you speaking from day one.
         
         My lessons are dynamic, cultural, and tailored to your specific goals (travel, business, or hobby).

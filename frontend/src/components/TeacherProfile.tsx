@@ -1,11 +1,14 @@
 import type { Teacher } from '../services/teacherService';
 import { Globe, Play, User as UserIcon } from 'lucide-react';
+import { useLanguage } from '../i18n';
 
 interface Props {
     teacher: Teacher;
 }
 
 const TeacherProfile = ({ teacher }: Props) => {
+    const { t } = useLanguage();
+
     return (
         <div className="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto my-12 border border-gray-100 transition-all hover:shadow-xl">
             <div className="flex flex-col md:flex-row gap-8 items-start">
@@ -23,7 +26,7 @@ const TeacherProfile = ({ teacher }: Props) => {
                         ))}
                     </div>
                     <div className="mt-4 px-6 py-2 bg-green-50 text-green-700 font-bold text-xl rounded-lg border border-green-100">
-                        ${teacher.price_per_hour}/hr
+                        ${teacher.price_per_hour}{t('teacher.pricePerHour')}
                     </div>
                 </div>
 
@@ -31,10 +34,10 @@ const TeacherProfile = ({ teacher }: Props) => {
                     <div className="prose prose-indigo max-w-none">
                         <h3 className="text-xl font-semibold text-gray-800 mb-3 flex items-center gap-2">
                             <span className="w-1.5 h-6 bg-indigo-600 rounded-full"></span>
-                            About Me
+                            {t('teacher.aboutMe')}
                         </h3>
                         <p className="text-gray-600 leading-relaxed text-lg whitespace-pre-line">
-                            {teacher.bio || "No biography provided yet."}
+                            {teacher.bio || t('teacher.noBio')}
                         </p>
                     </div>
 
@@ -42,13 +45,12 @@ const TeacherProfile = ({ teacher }: Props) => {
                         <div className="mt-4">
                             <h3 className="text-xl font-semibold text-gray-800 mb-4 flex items-center gap-2">
                                 <span className="w-1.5 h-6 bg-purple-600 rounded-full"></span>
-                                Intro Video
+                                {t('teacher.introVideo')}
                             </h3>
                             <div className="relative aspect-video rounded-2xl overflow-hidden bg-gray-900 shadow-inner ring-1 ring-white/10">
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <Play size={48} className="text-white/60 drop-shadow-lg" />
                                 </div>
-                                {/* Embed video logic here */}
                             </div>
                         </div>
                     )}
