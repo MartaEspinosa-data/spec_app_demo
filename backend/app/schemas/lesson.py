@@ -23,6 +23,7 @@ class LessonCreate(BaseModel):
     lesson_type: str
     start_time: datetime
     duration: int = 60
+    student_timezone: Optional[str] = "UTC"
     calendly_event_id: Optional[str] = None
 
 class Lesson(BaseModel):

@@ -17,7 +17,8 @@ class Lesson(Base):
     duration = Column(Integer, default=60)  # in minutes
     price = Column(Float, nullable=False)
     status = Column(String, default="pending")  # pending, scheduled, completed, cancelled
-    calendly_event_id = Column(String, unique=True, nullable=True)
-
+    student_timezone = Column(String, default="UTC", nullable=False)
+    calendly_event_id = Column(String, unique=True, nullable=True) # DEPRECATED: Switched to custom teacher calendar
+    
     student = relationship("Student")
     teacher = relationship("Teacher")

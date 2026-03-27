@@ -1,20 +1,27 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
 import { teacherService } from '../services/teacherService';
 import type { Teacher } from '../services/teacherService';
-import BookingCalendar from '../components/BookingCalendar';
+import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
+import { DurationSelector } from '../components/calendar/DurationSelector';
+import { EmbeddedCheckout } from '../components/EmbeddedCheckout';
 import { ChevronLeft, Info } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import LanguageSelector from '../components/LanguageSelector';
 
 const BookingPage = () => {
     const { id } = useParams<{ id: string }>();
+    const [searchParams] = useSearchParams();
+    const packageId = searchParams.get('package');
     const navigate = useNavigate();
     const [teacher, setTeacher] = useState<Teacher | null>(null);
+    const [packageInfo, setPackageInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+    const [selectedDuration, setSelectedDuration] = useState<number>(60);
     const [submitting, setSubmitting] = useState(false);
+    const [checkoutData, setCheckoutData] = useState<{clientSecret: string | null; lessonId: string; price: number} | null>(null);
     const { t } = useLanguage();
 
     const [formData, setFormData] = useState({
@@ -35,8 +42,27 @@ const BookingPage = () => {
                 setLoading(false);
             }
         };
+        const fetchPackage = async () => {
+            if (!packageId) return;
+            try {
+                // We'll just fetch all student packages and find the one we need
+                const studentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
+                if (!studentAuth) return;
+                const res = await axios.get(`http://localhost:8000/api/packages/student/${studentAuth.student_id}`);
+                const pkg = res.data.packages.find((p: any) => p.id === packageId);
+                if (pkg) {
+                    setPackageInfo(pkg);
+                    setSelectedDuration(pkg.duration);
+                    setFormData(prev => ({ ...prev, name: studentAuth.name, email: studentAuth.email }));
+                }
+            } catch (err) {
+                console.error('Error fetching package:', err);
+            }
+        };
+
         fetchTeacher();
-    }, [id]);
+        fetchPackage();
+    }, [id, packageId]);
 
     const handleBooking = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -44,18 +70,34 @@ const BookingPage = () => {
 
         setSubmitting(true);
         try {
+            if (packageId) {
+                await axios.post('http://localhost:8000/api/packages/book-with-package', {
+                    package_id: packageId,
+                    teacher_id: teacher.id,
+                    lesson_type: formData.subject,
+                    start_time: selectedSlot,
+                    student_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+                });
+                // Redirect to dashboard on success
+                navigate('/dashboard');
+                return;
+            }
+
             const response = await axios.post('http://localhost:8000/api/lessons/', {
                 student_name: formData.name,
                 student_email: formData.email,
                 teacher_id: teacher.id,
                 lesson_type: formData.subject,
                 start_time: selectedSlot,
-                duration: 60
+                duration: selectedDuration,
+                student_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             });
 
-            if (response.data.stripe_checkout_url) {
-                window.location.href = response.data.stripe_checkout_url;
-            }
+            setCheckoutData({
+                clientSecret: response.data.client_secret,
+                lessonId: response.data.lesson_id,
+                price: response.data.price,
+            });
         } catch (err) {
             console.error('Booking error:', err);
             alert('Error creating booking. Please try again.');
@@ -102,74 +144,106 @@ const BookingPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
                     {/* Left: Custom Calendar */}
                     <div className="lg:col-span-8">
-                        <BookingCalendar
+                        <DurationSelector 
+                            selected={selectedDuration}
+                            disabled={!!packageId}
+                            onChange={(mins) => {
+                                setSelectedDuration(mins);
+                                setSelectedSlot(null); // Reset slot when duration changes
+                            }}
+                        />
+                        <StudentBookingCalendar
                             teacherId={teacher.id}
                             onSlotSelect={setSelectedSlot}
-                            selectedSlot={selectedSlot}
+                            durationMinutes={selectedDuration}
                         />
                     </div>
 
                     {/* Right: Booking Form */}
                     <div className="lg:col-span-4 sticky top-40">
                         <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 relative overflow-hidden">
-                            <h2 className="text-3xl font-black text-gray-900 mb-8 relative z-10 flex items-center gap-3">
-                                <Info size={28} className="text-indigo-600" />
-                                Confirmar Reserva
-                            </h2>
-
-                            <form onSubmit={handleBooking} className="flex flex-col gap-6 relative z-10">
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">Nombre Completo</label>
-                                    <input
-                                        required
-                                        type="text"
-                                        className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
-                                        placeholder="Tu nombre aquí"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            {checkoutData ? (
+                                <div className="relative z-10">
+                                    <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                                        💳 {t('booking.payWithStripe')}
+                                    </h2>
+                                    <EmbeddedCheckout
+                                        clientSecret={checkoutData.clientSecret}
+                                        lessonId={checkoutData.lessonId}
+                                        price={checkoutData.price}
+                                        duration={selectedDuration}
+                                        onCancel={() => {
+                                            setCheckoutData(null);
+                                            setSelectedSlot(null);
+                                        }}
                                     />
                                 </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">Correo Electrónico</label>
-                                    <input
-                                        required
-                                        type="email"
-                                        className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
-                                        placeholder="tu@email.com"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">Asunto de la Clase</label>
-                                    <select
-                                        className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 appearance-none"
-                                        value={formData.subject}
-                                        onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                    >
-                                        <option>Español General</option>
-                                        <option>Preparación DELE</option>
-                                        <option>Conversación</option>
-                                        <option>Español de Negocios</option>
-                                    </select>
-                                </div>
+                            ) : (
+                                <>
+                                    <h2 className="text-3xl font-black text-gray-900 mb-8 relative z-10 flex items-center gap-3">
+                                        <Info size={28} className="text-indigo-600" />
+                                        {t('booking.confirmTitle')}
+                                    </h2>
 
-                                <div className="pt-4">
-                                    <button
-                                        disabled={!selectedSlot || submitting}
-                                        type="submit"
-                                        className={`w-full py-5 rounded-2xl font-black text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${selectedSlot
-                                            ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1'
-                                            : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                                            }`}
-                                    >
-                                        {submitting ? 'Procesando...' : (selectedSlot ? 'Ir al Pago con Stripe' : 'Selecciona una Hora')}
-                                    </button>
-                                </div>
-                                <p className="text-center text-xs font-bold text-gray-400 mt-2">
-                                    Pago seguro procesado por Stripe
-                                </p>
-                            </form>
+                                    <form onSubmit={handleBooking} className="flex flex-col gap-6 relative z-10">
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.name')}</label>
+                                            <input
+                                                required
+                                                type="text"
+                                                className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
+                                                placeholder={t('booking.form.namePlaceholder')}
+                                                value={formData.name}
+                                                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.email')}</label>
+                                            <input
+                                                required
+                                                type="email"
+                                                className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
+                                                placeholder={t('booking.form.emailPlaceholder')}
+                                                value={formData.email}
+                                                onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                            />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.subject')}</label>
+                                            <select
+                                                className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 appearance-none"
+                                                value={formData.subject}
+                                                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                            >
+                                                <option>{t('booking.subjects.general')}</option>
+                                                <option>{t('booking.subjects.dele')}</option>
+                                                <option>{t('booking.subjects.conversation')}</option>
+                                                <option>{t('booking.subjects.business')}</option>
+                                            </select>
+                                        </div>
+
+                                        <div className="pt-4">
+                                            <button
+                                                disabled={!selectedSlot || submitting}
+                                                type="submit"
+                                                className={`w-full py-5 rounded-2xl font-black text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${selectedSlot
+                                                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1'
+                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                                                    }`}
+                                            >
+                                                {submitting ? t('booking.processing') : (
+                                                    packageId 
+                                                        ? `Confirm Appointment (${packageInfo?.remaining_lessons} credits left)` 
+                                                        : (selectedSlot ? t('booking.payWithStripe') : t('booking.selectSlot'))
+                                                )}
+                                            </button>
+                                        </div>
+                                        <p className="text-center text-xs font-bold text-gray-400 mt-2">
+                                            {t('booking.stripeSecure')}
+                                        </p>
+                                    </form>
+                                </>
+                            )}
 
                             {/* Decorative background shape */}
                             <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0"></div>

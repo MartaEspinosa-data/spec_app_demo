@@ -1,42 +1,132 @@
 import { useState } from 'react';
-import { Sparkles, Calendar, Zap, MessageCircleQuestion, HelpCircle, CheckCircle2, Play } from 'lucide-react';
+import { Sparkles, Calendar, Zap, MessageCircleQuestion, CheckCircle2, Play, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import axios from 'axios';
 import { useLanguage } from '../i18n';
 import LanguageSelector from '../components/LanguageSelector';
+import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
+import { DurationSelector } from '../components/calendar/DurationSelector';
+import { EmbeddedCheckout } from '../components/EmbeddedCheckout';
 
 const LandingPage = () => {
     const { t } = useLanguage();
     const [showVideo, setShowVideo] = useState(false);
+    const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
+    const [selectedDuration, setSelectedDuration] = useState<number>(60);
+    const [submitting, setSubmitting] = useState(false);
+    const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP'>('USD');
+    const [checkoutData, setCheckoutData] = useState<{clientSecret: string | null; lessonId: string; price: number} | null>(null);
+    const [checkoutType, setCheckoutType] = useState<'lesson' | 'package'>('lesson');
+    const [formData, setFormData] = useState({
+        name: '',
+        email: '',
+        subject: 'General Spanish'
+    });
+
+    const studentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
+
     const martaId = "dc92ef71-d458-4e75-92d9-69b64fc1c964";
+
+    const handleBooking = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedSlot || !martaId) return;
+
+        setSubmitting(true);
+        try {
+            const response = await axios.post('http://localhost:8000/api/lessons/', {
+                student_name: formData.name,
+                student_email: formData.email,
+                teacher_id: martaId,
+                lesson_type: formData.subject,
+                start_time: selectedSlot,
+                duration: selectedDuration,
+                student_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+            });
+            
+            setCheckoutType('lesson');
+            setCheckoutData({
+                clientSecret: response.data.client_secret,
+                lessonId: response.data.lesson_id,
+                price: response.data.price,
+            });
+        } catch (err) {
+            console.error('Booking error:', err);
+            alert('Error creating booking. Please try again.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    const handlePackagePurchase = async (duration: number) => {
+        if (!studentAuth) {
+            alert('Please login as a student to purchase packages.');
+            window.location.href = '/student/login';
+            return;
+        }
+
+        setSubmitting(true);
+        try {
+            const response = await axios.post('http://localhost:8000/api/packages/purchase', {
+                student_id: studentAuth.student_id,
+                duration: duration
+            });
+
+            setCheckoutType('package');
+            setCheckoutData({
+                clientSecret: response.data.client_secret,
+                lessonId: response.data.package_id, // Reuse lessonId field for packageId
+                price: response.data.price,
+            });
+        } catch (err) {
+            console.error('Package purchase error:', err);
+            alert('Error initializing package purchase.');
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
+    // Base prices in USD
+    const basePricesUSD = { 30: 16.33, 45: 23.55, 60: 30.94 };
+    const exchangeRates = { USD: 1, EUR: 0.92, GBP: 0.79 };
+    const currencySymbols = { USD: '$', EUR: '€', GBP: '£' };
+    const rate = exchangeRates[currency];
+    const sym = currencySymbols[currency];
+
+    const formatPkg = (minutes: 30 | 45 | 60) => {
+        const base = basePricesUSD[minutes];
+        const discounted = base * 0.97; // 3% off
+        const perLesson = (discounted * rate).toFixed(2);
+        const total = (discounted * 5 * rate).toFixed(2);
+        const wasPer = (base * rate).toFixed(2);
+        const wasTotal = (base * 5 * rate).toFixed(2);
+        return { perLesson, total, wasPer, wasTotal };
+    };
+
+    const p30 = formatPkg(30), p45 = formatPkg(45), p60 = formatPkg(60);
 
     const packages = [
         {
-            title: t('landing.packages.starter.title'),
-            desc: t('landing.packages.starter.desc'),
-            price: t('landing.packages.starter.price'),
+            title: t('landing.packages.30min.title'),
+            desc: t('landing.packages.30min.desc'),
+            price: `5 x ${sym}${p30.perLesson} = ${sym}${p30.total} (${t('landing.packages.was')} ${sym}${p30.wasTotal})`,
             icon: <Zap size={24} className="text-yellow-500" />
         },
         {
-            title: t('landing.packages.frequent.title'),
-            desc: t('landing.packages.frequent.desc'),
-            price: t('landing.packages.frequent.price'),
+            title: t('landing.packages.45min.title'),
+            desc: t('landing.packages.45min.desc'),
+            price: `5 x ${sym}${p45.perLesson} = ${sym}${p45.total} (${t('landing.packages.was')} ${sym}${p45.wasTotal})`,
             icon: <Sparkles size={24} className="text-indigo-500" />,
             popular: true
         },
         {
-            title: t('landing.packages.dedicated.title'),
-            desc: t('landing.packages.dedicated.desc'),
-            price: t('landing.packages.dedicated.price'),
+            title: t('landing.packages.60min.title'),
+            desc: t('landing.packages.60min.desc'),
+            price: `5 x ${sym}${p60.perLesson} = ${sym}${p60.total} (${t('landing.packages.was')} ${sym}${p60.wasTotal})`,
             icon: <CheckCircle2 size={24} className="text-green-500" />
         }
     ];
 
-    const faqs = [
-        { q: t('landing.faq.q1'), a: t('landing.faq.a1') },
-        { q: t('landing.faq.q2'), a: t('landing.faq.a2') },
-        { q: t('landing.faq.q3'), a: t('landing.faq.a3') }
-    ];
-
+    const packageDurations = [30, 45, 60] as const;
     return (
         <div className="bg-[#f0f2f5] min-h-screen">
             <header className="fixed top-0 left-0 w-full bg-white/80 backdrop-blur-md shadow-sm z-50 transition-all border-b border-gray-100">
@@ -47,6 +137,19 @@ const LandingPage = () => {
                     </div>
                     <div className="flex gap-4 items-center">
                         <LanguageSelector />
+                        <Link to="/teacher/dashboard" className="text-gray-400 hover:text-indigo-600 transition" title="Teacher Dashboard">
+                            <Calendar size={20} />
+                        </Link>
+                        {studentAuth ? (
+                            <Link to="/dashboard" className="px-6 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 flex items-center gap-2">
+                                <Sparkles size={18} />
+                                Dashboard
+                            </Link>
+                        ) : (
+                            <Link to="/student/login" className="px-6 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100">
+                                Student Login
+                            </Link>
+                        )}
                         <Link to={`/book/${martaId}`} className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-500/30">
                             {t('nav.getStarted')}
                         </Link>
@@ -83,7 +186,7 @@ const LandingPage = () => {
                     <div className="w-full lg:w-2/5 relative">
                         <div className="relative z-10 rounded-[3rem] overflow-hidden shadow-2xl border-8 border-white transform lg:rotate-2 hover:rotate-0 transition-transform duration-500 hover:scale-[1.02]">
                             <img
-                                src="/presentation-cover.png"
+                                src="/marta-photo.jpg"
                                 alt="Aprende Español con Marta"
                                 className="w-full h-auto object-cover"
                             />
@@ -142,7 +245,22 @@ const LandingPage = () => {
                 <section className="max-w-6xl mx-auto mb-32">
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.packages.title')}</h2>
-                        <div className="w-24 h-1.5 bg-indigo-600 mx-auto rounded-full"></div>
+                        <div className="w-24 h-1.5 bg-indigo-600 mx-auto rounded-full mb-8"></div>
+                        <div className="flex justify-center gap-2 mt-4">
+                            {(['USD', 'EUR', 'GBP'] as const).map((c) => (
+                                <button
+                                    key={c}
+                                    onClick={() => setCurrency(c)}
+                                    className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all ${
+                                        currency === c
+                                            ? 'bg-indigo-600 text-white shadow-lg'
+                                            : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-300'
+                                    }`}
+                                >
+                                    {c === 'USD' ? '$ USD' : c === 'EUR' ? '€ EUR' : '£ GBP'}
+                                </button>
+                            ))}
+                        </div>
                     </div>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                         {packages.map((pkg, i) => (
@@ -163,36 +281,138 @@ const LandingPage = () => {
                                     <div className="text-lg font-bold text-gray-900 mb-6 bg-gray-50 p-4 rounded-xl border border-gray-100 text-center">
                                         {pkg.price}
                                     </div>
-                                    <Link to={`/book/${martaId}`} className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${pkg.popular ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30' : 'bg-white text-indigo-600 border-2 border-indigo-100 hover:border-indigo-600'}`}>
-                                        <Calendar size={20} />
-                                        Book Now
-                                    </Link>
+                                    <button
+                                        onClick={() => handlePackagePurchase(packageDurations[i])}
+                                        className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all ${pkg.popular ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30' : 'bg-white text-indigo-600 border-2 border-indigo-100 hover:border-indigo-600'}`}
+                                    >
+                                        <Zap size={20} />
+                                        Buy 5 Classes
+                                    </button>
                                 </div>
                             </div>
                         ))}
                     </div>
                 </section>
 
-                {/* FAQ Section */}
-                <section className="max-w-4xl mx-auto mb-32 bg-white rounded-3xl p-8 md:p-12 shadow-lg border border-gray-100">
-                    <div className="text-center mb-12 flex flex-col items-center">
-                        <HelpCircle size={48} className="text-indigo-600 mb-6 opacity-20" />
-                        <h2 className="text-3xl md:text-4xl font-black text-gray-900 mb-4">{t('landing.faq.title')}</h2>
+                {/* Booking Section */}
+                <section id="book" className="max-w-7xl mx-auto mb-32">
+                    <div className="text-center mb-16">
+                        <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.booking.title')}</h2>
+                        <div className="w-24 h-1.5 bg-indigo-600 mx-auto rounded-full mb-6"></div>
+                        <p className="text-xl text-gray-500 font-medium max-w-2xl mx-auto leading-relaxed">
+                            {t('landing.booking.subtitle')}
+                        </p>
                     </div>
-                    <div className="space-y-8">
-                        {faqs.map((faq, i) => (
-                            <div key={i} className="group">
-                                <h3 className="text-xl font-bold text-gray-800 mb-3 flex items-start gap-4">
-                                    <span className="text-indigo-400 mt-1">Q.</span>
-                                    {faq.q}
-                                </h3>
-                                <p className="text-gray-600 leading-relaxed text-lg pl-8 border-l-2 border-transparent group-hover:border-indigo-100 transition-colors">
-                                    {faq.a}
-                                </p>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-start">
+                        {/* Left: Custom Calendar */}
+                        <div className="lg:col-span-8">
+                            <DurationSelector 
+                                selected={selectedDuration}
+                                onChange={(mins) => {
+                                    setSelectedDuration(mins);
+                                    setSelectedSlot(null);
+                                }}
+                            />
+                            <StudentBookingCalendar
+                                teacherId={martaId}
+                                onSlotSelect={setSelectedSlot}
+                                durationMinutes={selectedDuration}
+                            />
+                        </div>
+
+                        {/* Right: Booking Form / Payment */}
+                        <div className="lg:col-span-4 lg:sticky lg:top-32">
+                            <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 relative overflow-hidden">
+                                {checkoutData ? (
+                                    /* Embedded Stripe Payment Form */
+                                    <div className="relative z-10">
+                                        <h2 className="text-2xl font-black text-gray-900 mb-6 flex items-center gap-3">
+                                            💳 {t('booking.payWithStripe')}
+                                        </h2>
+                                        <EmbeddedCheckout
+                                            type={checkoutType}
+                                            clientSecret={checkoutData.clientSecret}
+                                            lessonId={checkoutData.lessonId}
+                                            price={checkoutData.price}
+                                            duration={selectedDuration}
+                                            onCancel={() => {
+                                                setCheckoutData(null);
+                                                setSelectedSlot(null);
+                                            }}
+                                        />
+                                    </div>
+                                ) : (
+                                    /* Booking Details Form */
+                                    <>
+                                        <h2 className="text-3xl font-black text-gray-900 mb-8 relative z-10 flex items-center gap-3">
+                                            <Info size={28} className="text-indigo-600" />
+                                            {t('booking.confirmTitle')}
+                                        </h2>
+
+                                        <form onSubmit={handleBooking} className="flex flex-col gap-6 relative z-10">
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.name')}</label>
+                                                <input
+                                                    required
+                                                    type="text"
+                                                    className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
+                                                    placeholder={t('booking.form.namePlaceholder')}
+                                                    value={formData.name}
+                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.email')}</label>
+                                                <input
+                                                    required
+                                                    type="email"
+                                                    className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
+                                                    placeholder={t('booking.form.emailPlaceholder')}
+                                                    value={formData.email}
+                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                                />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.subject')}</label>
+                                                <select
+                                                    className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 appearance-none"
+                                                    value={formData.subject}
+                                                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                                >
+                                                    <option>{t('booking.subjects.general')}</option>
+                                                    <option>{t('booking.subjects.dele')}</option>
+                                                    <option>{t('booking.subjects.conversation')}</option>
+                                                    <option>{t('booking.subjects.business')}</option>
+                                                </select>
+                                            </div>
+
+                                            <div className="pt-4">
+                                                <button
+                                                    disabled={!selectedSlot || submitting}
+                                                    type="submit"
+                                                    className={`w-full py-5 rounded-2xl font-black text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${selectedSlot
+                                                        ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1'
+                                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                                                        }`}
+                                                >
+                                                    {submitting ? t('booking.processing') : (selectedSlot ? t('booking.payWithStripe') : t('booking.selectSlot'))}
+                                                </button>
+                                            </div>
+                                            <p className="text-center text-xs font-bold text-gray-400 mt-2">
+                                                {t('booking.stripeSecure')}
+                                            </p>
+                                        </form>
+                                    </>
+                                )}
+
+                                {/* Decorative background shape */}
+                                <div className="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0"></div>
                             </div>
-                        ))}
+                        </div>
                     </div>
                 </section>
+
             </main>
         </div>
     );

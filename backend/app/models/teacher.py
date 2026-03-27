@@ -13,5 +13,7 @@ class Teacher(Base):
     bio = Column(Text)
     languages = Column(JSON, default=[])  # List of strings
     price_per_hour = Column(Float, nullable=False)
+    pricing_schema = Column(JSON, default={})  # {duration_min: price}
+    lessons_taught = Column(Float, default=0.0)
     video_url = Column(String)
     calendly_url = Column(String)
