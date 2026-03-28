@@ -27,7 +27,7 @@ const BookingPage = () => {
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        subject: 'General Spanish'
+        subject: 'Conversación'
     });
 
     useEffect(() => {
@@ -210,16 +210,14 @@ const BookingPage = () => {
                                         </div>
                                         <div className="space-y-2">
                                             <label className="block text-sm font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.subject')}</label>
-                                            <select
-                                                className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 appearance-none"
-                                                value={formData.subject}
-                                                onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                            >
-                                                <option>{t('booking.subjects.general')}</option>
-                                                <option>{t('booking.subjects.dele')}</option>
-                                                <option>{t('booking.subjects.conversation')}</option>
-                                                <option>{t('booking.subjects.business')}</option>
-                                            </select>
+                                                <select
+                                                    className="w-full px-6 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 appearance-none"
+                                                    value={formData.subject}
+                                                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                                >
+                                                    <option>{t('booking.subjects.conversation')}</option>
+                                                    <option>{t('booking.subjects.basic_course')}</option>
+                                                </select>
                                         </div>
 
                                         <div className="pt-4">

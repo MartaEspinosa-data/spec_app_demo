@@ -10,6 +10,10 @@ import StudentLogin from './pages/StudentLogin';
 import { PaymentSuccess, PaymentCancelled } from './pages/PaymentStatus';
 import ErrorBoundary from './components/ErrorBoundary';
 import NotFound from './pages/NotFound';
+import LegalNotice from './pages/LegalNotice';
+import PrivacyPolicy from './pages/PrivacyPolicy';
+import CookiePolicy from './pages/CookiePolicy';
+import { CookieBanner } from './components/CookieBanner';
 
 function App() {
   return (
@@ -28,8 +32,12 @@ function App() {
               <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
               <Route path="/payment-cancelled" element={<PaymentCancelled />} />
+              <Route path="/legal" element={<LegalNotice />} />
+              <Route path="/privacy" element={<PrivacyPolicy />} />
+              <Route path="/cookies" element={<CookiePolicy />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
+            <CookieBanner />
           </div>
         </Router>
       </LanguageProvider>

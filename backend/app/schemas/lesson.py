@@ -36,6 +36,14 @@ class Lesson(BaseModel):
     price: float
     status: str
     calendly_event_id: Optional[str] = None
+    feedback_vocabulary: Optional[str] = None
+    feedback_errors: Optional[str] = None
+    feedback_materials: Optional[str] = None
 
     class Config:
         orm_mode = True
+
+class LessonFeedbackUpdate(BaseModel):
+    feedback_vocabulary: Optional[str] = None
+    feedback_errors: Optional[str] = None
+    feedback_materials: Optional[str] = None

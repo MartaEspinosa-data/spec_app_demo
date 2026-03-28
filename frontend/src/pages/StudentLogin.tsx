@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, BookOpen } from 'lucide-react';
-import { useLanguage } from '../i18n';
+import { GoogleLogin } from '@react-oauth/google';
+import { jwtDecode } from 'jwt-decode';
 
 const StudentLogin = () => {
     const navigate = useNavigate();
-    const { t } = useLanguage();
     const [isRegister, setIsRegister] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -31,6 +31,38 @@ const StudentLogin = () => {
             if (!res.ok) {
                 const data = await res.json();
                 throw new Error(data.detail || 'Authentication failed');
+            }
+
+            const data = await res.json();
+            localStorage.setItem('student_auth', JSON.stringify(data));
+            navigate('/dashboard');
+        } catch (err: any) {
+            setError(err.message);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse: any) => {
+        setLoading(true);
+        setError('');
+        try {
+            const decoded: any = jwtDecode(credentialResponse.credential);
+            
+            const res = await fetch('http://localhost:8000/api/students/google-login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    token: credentialResponse.credential,
+                    email: decoded.email,
+                    name: decoded.name,
+                    google_id: decoded.sub
+                }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.detail || 'Google Login failed');
             }
 
             const data = await res.json();
@@ -128,7 +160,28 @@ const StudentLogin = () => {
                         </button>
                     </form>
 
-                    <div className="mt-6 text-center">
+                    <div className="relative my-8">
+                        <div className="absolute inset-0 flex items-center">
+                            <div className="w-full border-t border-gray-100"></div>
+                        </div>
+                        <div className="relative flex justify-center text-xs uppercase font-black tracking-widest">
+                            <span className="bg-white px-4 text-gray-400">or continue with</span>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-center">
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={() => setError('Google Login failed')}
+                            useOneTap
+                            theme="outline"
+                            shape="pill"
+                            size="large"
+                            width="100%"
+                        />
+                    </div>
+
+                    <div className="mt-8 text-center">
                         <button
                             onClick={() => { setIsRegister(!isRegister); setError(''); }}
                             className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition"

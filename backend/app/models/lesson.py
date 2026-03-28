@@ -18,7 +18,17 @@ class Lesson(Base):
     price = Column(Float, nullable=False)
     status = Column(String, default="pending")  # pending, scheduled, completed, cancelled
     student_timezone = Column(String, default="UTC", nullable=False)
+    meeting_link = Column(String, nullable=True, default="https://meet.google.com/pyv-dxwi-mxc")
     calendly_event_id = Column(String, unique=True, nullable=True) # DEPRECATED: Switched to custom teacher calendar
+    
+    # Pedagogical Feedback
+    feedback_vocabulary = Column(String, nullable=True)
+    feedback_errors = Column(String, nullable=True)
+    feedback_materials = Column(String, nullable=True)
+    
+    # Notifications tracking
+    reminder_60m_sent = Column(Integer, default=0) # Using 0/1 for SQLite simplicity
+    reminder_30m_sent = Column(Integer, default=0)
     
     student = relationship("Student")
     teacher = relationship("Teacher")

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useStripe, useElements, PaymentElement, Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { CreditCard, Shield, CheckCircle, Loader2 } from 'lucide-react';
+import { CreditCard, Shield, CheckCircle, Loader2, Sparkles } from 'lucide-react';
 import axios from 'axios';
 
 const stripePromise = loadStripe(import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY);
@@ -143,10 +143,9 @@ const CheckoutForm = ({ type, lessonId, price, duration, onSuccess, onCancel }: 
 
 interface PaymentSuccessInlineProps {
     type: 'lesson' | 'package';
-    onClose: () => void;
 }
 
-const PaymentSuccessInline = ({ type, onClose }: PaymentSuccessInlineProps) => (
+const PaymentSuccessInline = ({ type }: PaymentSuccessInlineProps) => (
     <div className="text-center py-8 space-y-6">
         <CheckCircle size={64} className="text-green-500 mx-auto animate-bounce" />
         <div>
@@ -181,12 +180,11 @@ const PaymentSuccessInline = ({ type, onClose }: PaymentSuccessInlineProps) => (
 
         <button
             onClick={() => {
-                if (type === 'package') window.location.href = '/dashboard';
-                else onClose();
+                window.location.href = '/dashboard';
             }}
             className="px-8 py-3 bg-gray-100 text-gray-600 rounded-xl font-bold hover:bg-gray-200 transition"
         >
-            {type === 'package' ? 'Go to Dashboard' : 'Back to Home'}
+            Go to Dashboard
         </button>
     </div>
 );
@@ -198,13 +196,19 @@ interface EmbeddedCheckoutProps {
     price: number;
     duration: number;
     onCancel: () => void;
+    onPaymentSuccess?: () => void;
 }
 
-export const EmbeddedCheckout = ({ type = 'lesson', clientSecret, lessonId, price, duration, onCancel }: EmbeddedCheckoutProps) => {
+export const EmbeddedCheckout = ({ type = 'lesson', clientSecret, lessonId, price, duration, onCancel, onPaymentSuccess }: EmbeddedCheckoutProps) => {
     const [success, setSuccess] = useState(false);
 
+    const handleSuccess = () => {
+        setSuccess(true);
+        if (onPaymentSuccess) onPaymentSuccess();
+    };
+
     if (success) {
-        return <PaymentSuccessInline type={type} onClose={onCancel} />;
+        return <PaymentSuccessInline type={type} />;
     }
 
     if (!clientSecret) {
@@ -252,7 +256,7 @@ export const EmbeddedCheckout = ({ type = 'lesson', clientSecret, lessonId, pric
                 lessonId={lessonId}
                 price={price}
                 duration={duration}
-                onSuccess={() => setSuccess(true)}
+                onSuccess={handleSuccess}
                 onCancel={onCancel}
             />
         </Elements>

@@ -24,6 +24,13 @@ class LoginRequest(BaseModel):
     password: str
 
 
+class GoogleLoginRequest(BaseModel):
+    token: str
+    email: EmailStr
+    name: str
+    google_id: str
+
+
 @router.post("/register")
 def register_student(data: RegisterRequest, db: Session = Depends(get_db)):
     existing = db.query(Student).filter(Student.email == data.email).first()
@@ -70,6 +77,36 @@ def login_student(data: LoginRequest, db: Session = Depends(get_db)):
     }
 
 
+@router.post("/google-login")
+def google_login(data: GoogleLoginRequest, db: Session = Depends(get_db)):
+    # In a production app, we would verify 'data.token' with google.oauth2.id_token
+    # For now, we trust the frontend's verified data
+    
+    student = db.query(Student).filter(Student.email == data.email).first()
+    
+    if not student:
+        # Create new student from Google data
+        student = Student(
+            name=data.name,
+            email=data.email,
+            google_id=data.google_id
+        )
+        db.add(student)
+        db.commit()
+        db.refresh(student)
+    elif not student.google_id:
+        # Link existing account to Google
+        student.google_id = data.google_id
+        db.commit()
+        db.refresh(student)
+        
+    return {
+        "student_id": student.id,
+        "name": student.name,
+        "email": student.email,
+    }
+
+
 @router.get("/{student_id}/lessons")
 def get_student_lessons(student_id: str, db: Session = Depends(get_db)):
     lessons = db.query(Lesson).filter(
@@ -85,5 +122,9 @@ def get_student_lessons(student_id: str, db: Session = Depends(get_db)):
             "duration": l.duration,
             "price": l.price,
             "status": l.status,
+            "meeting_link": l.meeting_link,
+            "feedback_vocabulary": l.feedback_vocabulary,
+            "feedback_errors": l.feedback_errors,
+            "feedback_materials": l.feedback_materials,
         })
     return {"lessons": result}

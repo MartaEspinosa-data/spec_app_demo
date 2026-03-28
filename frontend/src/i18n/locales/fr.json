@@ -1,6 +1,7 @@
 {
   "nav.brand": "HolaLingo",
-  "nav.getStarted": "Commencer",
+  "nav.getStarted": "Réserver une Leçon",
+  "nav.teacherDashboard": "Tableau de Bord Enseignant",
 
   "landing.badge": "Améliorez Votre Espagnol",
   "landing.hero.title": "Apprenez l'Espagnol avec un ",
@@ -38,11 +39,14 @@
   "booking.step4": "Recevez un e-mail avec le lien vers votre salle de classe virtuelle.",
   "booking.needHelp": "Besoin d'Aide ?",
   "booking.helpText": "Contactez le support si vous avez des questions sur les types de cours ou les durées.",
+  "booking.subjects.conversation": "Cours de conversation",
+  "booking.subjects.basic_course": "Cours d'espagnol de base (débutant - intermédiaire)",
   "booking.chatSupport": "Chat Support",
   "booking.scheduleWith": "Planifier avec {name}",
   "booking.timezone": "Tous les horaires sont affichés dans votre fuseau horaire local.",
 
   "dashboard.brand": "HolaLingo",
+  "dashboard.studentTitle": "Tableau de Bord Étudiant",
   "dashboard.lessons": "Cours",
   "dashboard.materials": "Matériaux",
   "dashboard.progress": "Progrès",

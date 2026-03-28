@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, BookOpen, Clock, DollarSign, Package, LogOut, Home, User } from 'lucide-react';
+import { Calendar, BookOpen, Clock, DollarSign, Package, LogOut, Home, User, Play } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import LanguageSelector from '../components/LanguageSelector';
+import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
+import { AddToCalendar } from '../components/AddToCalendar';
 import axios from 'axios';
 
 interface LessonInfo {
@@ -12,6 +14,10 @@ interface LessonInfo {
     duration: number;
     price: number;
     status: string;
+    meeting_link: string | null;
+    feedback_vocabulary?: string;
+    feedback_errors?: string;
+    feedback_materials?: string;
 }
 
 interface PackageInfo {
@@ -32,6 +38,7 @@ const DashboardPage = () => {
     const [lessons, setLessons] = useState<LessonInfo[]>([]);
     const [packages, setPackages] = useState<PackageInfo[]>([]);
     const [loading, setLoading] = useState(true);
+    const [reschedulingLesson, setReschedulingLesson] = useState<LessonInfo | null>(null);
 
     const studentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
 
@@ -105,7 +112,7 @@ const DashboardPage = () => {
             <aside className="w-64 bg-white border-r border-gray-200 p-6 flex flex-col gap-8">
                 <div>
                     <div className="flex items-center justify-between mb-4">
-                        <div className="text-lg font-black text-indigo-600 tracking-tighter uppercase">Student</div>
+                        <div className="text-lg font-black text-indigo-600 tracking-tighter uppercase">{t('dashboard.studentTitle')}</div>
                         <div className="flex items-center gap-3">
                             <LanguageSelector />
                             <Link to="/" className="text-gray-400 hover:text-indigo-600 transition" title="Home">
@@ -143,7 +150,7 @@ const DashboardPage = () => {
             <main className="flex-1 p-12">
                 <header className="mb-10">
                     <h1 className="text-4xl font-black text-gray-900 mb-2">
-                        {activeTab === 'lessons' ? 'My Lessons' : 'My Packages'}
+                        {activeTab === 'lessons' ? t('dashboard.studentTitle') : 'My Packages'}
                     </h1>
                     <p className="text-gray-500 font-medium">
                         {activeTab === 'lessons'
@@ -177,7 +184,7 @@ const DashboardPage = () => {
                                             {lesson.status}
                                         </span>
                                     </div>
-                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
                                         <div className="flex items-center gap-2 text-sm">
                                             <Calendar size={16} className="text-gray-400" />
                                             <span className="font-bold text-gray-700">{formatDate(lesson.start_time)}</span>
@@ -195,6 +202,78 @@ const DashboardPage = () => {
                                             <span className="font-bold text-gray-700">${lesson.price.toFixed(2)}</span>
                                         </div>
                                     </div>
+
+                                    {lesson.status === 'scheduled' && (
+                                        <div className="pt-4 border-t border-gray-50 flex flex-wrap items-center justify-end gap-3">
+                                            <div className="mr-auto">
+                                                <AddToCalendar 
+                                                    title={`Spanish Lesson with Marta (${lesson.lesson_type})`}
+                                                    startTime={lesson.start_time}
+                                                    durationMinutes={lesson.duration}
+                                                    description={`Spanish lesson focused on ${lesson.lesson_type}. \n\nMeeting link: ${lesson.meeting_link || 'https://meet.google.com/pyv-dxwi-mxc'}`}
+                                                    location={lesson.meeting_link || 'https://meet.google.com/pyv-dxwi-mxc'}
+                                                />
+                                            </div>
+                                            {new Date(lesson.start_time).getTime() - new Date().getTime() > 24 * 60 * 60 * 1000 ? (
+                                                <button
+                                                    onClick={() => setReschedulingLesson(lesson)}
+                                                    className="px-6 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition flex items-center gap-2 text-sm"
+                                                >
+                                                    <Calendar size={16} />
+                                                    Reschedule
+                                                </button>
+                                            ) : (
+                                                <span className="text-xs text-gray-400 font-medium flex items-center mr-auto md:mr-0">
+                                                    Rescheduling closed (&lt; 24h)
+                                                </span>
+                                            )}
+                                            <a 
+                                                href={lesson.meeting_link || 'https://meet.google.com/pyv-dxwi-mxc'} 
+                                                target="_blank" 
+                                                rel="noopener noreferrer"
+                                                className="px-6 py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-lg hover:shadow-green-500/30 flex items-center gap-2 text-sm"
+                                            >
+                                                <Play size={16} />
+                                                Join Lesson
+                                            </a>
+                                        </div>
+                                    )}
+
+                                    {/* Feedback Section for Students */}
+                                    {(lesson.feedback_vocabulary || lesson.feedback_errors || lesson.feedback_materials) && (
+                                        <div className="mt-6 pt-6 border-t border-gray-100 bg-gray-50/30 -mx-6 px-6 rounded-b-2xl">
+                                            <h4 className="text-xs font-black text-indigo-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                                                <BookOpen size={14} />
+                                                Notes from Marta
+                                            </h4>
+                                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4">
+                                                {lesson.feedback_vocabulary && (
+                                                    <div className="bg-white p-4 rounded-xl border border-gray-100 shadow-sm">
+                                                        <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest mb-1">Vocabulary</p>
+                                                        <p className="text-sm text-gray-700 leading-relaxed font-medium">{lesson.feedback_vocabulary}</p>
+                                                    </div>
+                                                )}
+                                                {lesson.feedback_errors && (
+                                                    <div className="bg-white p-4 rounded-xl border border-red-50 shadow-sm">
+                                                        <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Corrections</p>
+                                                        <p className="text-sm text-gray-700 leading-relaxed font-medium">{lesson.feedback_errors}</p>
+                                                    </div>
+                                                )}
+                                                {lesson.feedback_materials && (
+                                                    <div className="bg-white p-4 rounded-xl border border-blue-50 shadow-sm">
+                                                        <p className="text-[10px] font-black text-blue-400 uppercase tracking-widest mb-1">Materials</p>
+                                                        {lesson.feedback_materials.startsWith('http') ? (
+                                                            <a href={lesson.feedback_materials} target="_blank" rel="noopener noreferrer" className="text-sm text-indigo-600 font-bold underline hover:text-indigo-700 break-all">
+                                                                {lesson.feedback_materials}
+                                                            </a>
+                                                        ) : (
+                                                            <p className="text-sm text-gray-700 leading-relaxed font-medium">{lesson.feedback_materials}</p>
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             ))}
                         </div>
@@ -238,6 +317,51 @@ const DashboardPage = () => {
                                 ))}
                             </div>
                         )}
+                    </div>
+                )}
+
+                {/* Rescheduling Modal */}
+                {reschedulingLesson && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-fade-in">
+                        <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-scale-in">
+                            <div className="p-8 border-b border-gray-100 flex items-center justify-between bg-indigo-600 text-white">
+                                <div>
+                                    <h2 className="text-2xl font-black">Reschedule Lesson</h2>
+                                    <p className="opacity-80 font-medium">Select a new date and time for your {reschedulingLesson.lesson_type}</p>
+                                </div>
+                                <button 
+                                    onClick={() => setReschedulingLesson(null)}
+                                    className="p-2 hover:bg-white/10 rounded-full transition"
+                                >
+                                    <LogOut size={24} className="rotate-180" />
+                                </button>
+                            </div>
+                            
+                            <div className="p-8 max-h-[70vh] overflow-y-auto">
+                                <StudentBookingCalendar 
+                                    teacherId="dc92ef71-d458-4e75-92d9-69b64fc1c964" // Profe Marta
+                                    durationMinutes={reschedulingLesson.duration}
+                                    onSlotSelect={async (newSlot) => {
+                                        if (window.confirm("Confirm rescheduling this lesson?")) {
+                                            try {
+                                                const res = await fetch(`http://localhost:8000/api/lessons/${reschedulingLesson.id}/reschedule?new_start_time=${newSlot}`, {
+                                                    method: 'PATCH'
+                                                });
+                                                if (!res.ok) throw new Error("Failed to reschedule");
+                                                
+                                                alert("Lesson successfully rescheduled!");
+                                                setReschedulingLesson(null);
+                                                // Refresh lessons
+                                                const lessonsRes = await axios.get(`http://localhost:8000/api/students/${studentAuth.student_id}/lessons`);
+                                                setLessons(lessonsRes.data.lessons);
+                                            } catch (err) {
+                                                alert("Error rescheduling: " + err);
+                                            }
+                                        }
+                                    }}
+                                />
+                            </div>
+                        </div>
                     </div>
                 )}
             </main>

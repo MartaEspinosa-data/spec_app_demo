@@ -2,25 +2,26 @@ import { useState } from 'react';
 import { Sparkles, Calendar, Zap, MessageCircleQuestion, CheckCircle2, Play, Info } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
-import { useLanguage } from '../i18n';
+import { useLanguage, LANGUAGES } from '../i18n';
 import LanguageSelector from '../components/LanguageSelector';
 import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
 import { DurationSelector } from '../components/calendar/DurationSelector';
 import { EmbeddedCheckout } from '../components/EmbeddedCheckout';
+import { ReviewsCarousel } from '../components/ReviewsCarousel';
 
 const LandingPage = () => {
-    const { t } = useLanguage();
+    const { t, language, setLanguage } = useLanguage();
     const [showVideo, setShowVideo] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<number>(60);
     const [submitting, setSubmitting] = useState(false);
     const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP'>('USD');
-    const [checkoutData, setCheckoutData] = useState<{clientSecret: string | null; lessonId: string; price: number} | null>(null);
+    const [checkoutData, setCheckoutData] = useState<{clientSecret: string | null; lessonId: string; price: number; studentData?: any} | null>(null);
     const [checkoutType, setCheckoutType] = useState<'lesson' | 'package'>('lesson');
     const [formData, setFormData] = useState({
         name: '',
         email: '',
-        subject: 'General Spanish'
+        subject: 'Conversación'
     });
 
     const studentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
@@ -48,6 +49,11 @@ const LandingPage = () => {
                 clientSecret: response.data.client_secret,
                 lessonId: response.data.lesson_id,
                 price: response.data.price,
+                studentData: {
+                    student_id: response.data.student_id,
+                    name: response.data.student_name,
+                    email: response.data.student_email
+                }
             });
         } catch (err) {
             console.error('Booking error:', err);
@@ -137,19 +143,23 @@ const LandingPage = () => {
                     </div>
                     <div className="flex gap-4 items-center">
                         <LanguageSelector />
-                        <Link to="/teacher/dashboard" className="text-gray-400 hover:text-indigo-600 transition" title="Teacher Dashboard">
-                            <Calendar size={20} />
-                        </Link>
-                        {studentAuth ? (
-                            <Link to="/dashboard" className="px-6 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 flex items-center gap-2">
-                                <Sparkles size={18} />
-                                Dashboard
+                        <div className="flex items-center gap-2">
+                            <Link to="/teacher/dashboard" className="px-4 py-2 text-indigo-400 hover:text-indigo-600 font-bold transition flex items-center gap-2 border border-transparent hover:border-indigo-100 rounded-full" title={t('nav.teacherDashboard') || 'Teacher Dashboard'}>
+                                <Calendar size={18} />
+                                <span className="hidden md:inline">{t('nav.teacherDashboard') || 'Teacher Dashboard'}</span>
                             </Link>
-                        ) : (
-                            <Link to="/student/login" className="px-6 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100">
-                                Student Login
-                            </Link>
-                        )}
+
+                            {studentAuth ? (
+                                <Link to="/dashboard" className="px-6 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 flex items-center gap-2">
+                                    <Sparkles size={18} />
+                                    {t('dashboard.studentTitle') || 'Student Dashboard'}
+                                </Link>
+                            ) : (
+                                <Link to="/student/login" className="px-6 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100">
+                                    Student Login
+                                </Link>
+                            )}
+                        </div>
                         <Link to={`/book/${martaId}`} className="px-6 py-2.5 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-500/30">
                             {t('nav.getStarted')}
                         </Link>
@@ -340,6 +350,11 @@ const LandingPage = () => {
                                                 setCheckoutData(null);
                                                 setSelectedSlot(null);
                                             }}
+                                            onPaymentSuccess={() => {
+                                                if (checkoutData.studentData && !studentAuth) {
+                                                    localStorage.setItem('student_auth', JSON.stringify(checkoutData.studentData));
+                                                }
+                                            }}
                                         />
                                     </div>
                                 ) : (
@@ -380,10 +395,8 @@ const LandingPage = () => {
                                                     value={formData.subject}
                                                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                                                 >
-                                                    <option>{t('booking.subjects.general')}</option>
-                                                    <option>{t('booking.subjects.dele')}</option>
                                                     <option>{t('booking.subjects.conversation')}</option>
-                                                    <option>{t('booking.subjects.business')}</option>
+                                                    <option>{t('booking.subjects.basic_course')}</option>
                                                 </select>
                                             </div>
 
@@ -413,6 +426,28 @@ const LandingPage = () => {
                     </div>
                 </section>
 
+                {/* Reviews Carousel */}
+                <ReviewsCarousel />
+
+                {/* Footer / Language Selector at the end */}
+                <footer className="max-w-7xl mx-auto pt-20 pb-10 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div className="flex items-center gap-3 text-2xl font-black text-gray-900">
+                        <MessageCircleQuestion size={32} className="text-indigo-600" />
+                        {t('nav.brand')}
+                    </div>
+                    
+                    <div className="flex flex-col md:flex-row items-center gap-8">
+                        <div className="flex gap-6 text-sm font-bold text-gray-400">
+                            <Link to="/legal" className="hover:text-indigo-600 transition">Aviso Legal</Link>
+                            <Link to="/privacy" className="hover:text-indigo-600 transition">Privacidad</Link>
+                            <Link to="/cookies" className="hover:text-indigo-600 transition">Cookies</Link>
+                        </div>
+                        <Link to={`/book/${martaId}`} className="px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition shadow-xl hover:shadow-indigo-500/30 flex items-center gap-2">
+                            <Calendar size={20} />
+                            {t('nav.getStarted')}
+                        </Link>
+                    </div>
+                </footer>
             </main>
         </div>
     );
