@@ -94,11 +94,12 @@ const TeacherDashboard = () => {
     const updateStatus = async (lessonId: string, newStatus: string) => {
         try {
             await axios.patch(`http://localhost:8000/api/lessons/${lessonId}/feedback`, {}, {
-                params: { status: newStatus } // Wait, I didn't implement status update in the feedback endpoint. I should probably add a general lesson update endpoint or use the feedback one if I repurpose it.
+                params: { status: newStatus }
             });
-            // Actually, I'll just add a simple status update to the feedback endpoint for now or create a new one.
-            // Let's stick to feedback for now as requested.
-        } catch (err) { }
+            fetchLessons();
+        } catch (err) {
+            console.error("Failed to update status:", err);
+        }
     };
 
     const formatDate = (isoString: string) => {
@@ -220,9 +221,16 @@ const TeacherDashboard = () => {
                                                     location="https://meet.google.com/pyv-dxwi-mxc"
                                                     className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-xs font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 transition-all"
                                                 />
-                                                <span className={`px-4 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${statusColor(lesson.status)}`}>
-                                                    {lesson.status}
-                                                </span>
+                                                <select
+                                                    value={lesson.status}
+                                                    onChange={(e) => updateStatus(lesson.id, e.target.value)}
+                                                    className={`px-3 py-1.5 rounded-xl text-xs font-black uppercase tracking-wider border border-transparent shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all ${statusColor(lesson.status)}`}
+                                                >
+                                                    <option value="pending" className="bg-white text-gray-700">pending</option>
+                                                    <option value="scheduled" className="bg-white text-gray-700">scheduled</option>
+                                                    <option value="completed" className="bg-white text-gray-700">completed</option>
+                                                    <option value="cancelled" className="bg-white text-gray-700">cancelled</option>
+                                                </select>
                                             </div>
                                         </div>
                                         <div className="mt-5 grid grid-cols-2 md:grid-cols-4 gap-4">

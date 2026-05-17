@@ -5,14 +5,18 @@ from app.models import lesson as models
 from app.models import student as student_models
 from app.models import teacher as teacher_models
 from app.schemas import lesson as schemas
-from datetime import datetime, time, timedelta, date as date_type
+from datetime import datetime, time, timedelta, timezone, date as date_type
+from typing import Optional
 import stripe
 import os
+import zoneinfo
 
 router = APIRouter(prefix="/api/lessons", tags=["lessons"])
 stripe.api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
 
 from app.models.availability import TeacherAvailability
+
+MADRID_TZ = zoneinfo.ZoneInfo("Europe/Madrid")
 
 def get_slots_for_day(db: Session, teacher_id: str, target_date: date_type, duration: int = 60):
     # Fetch availability rules
@@ -35,36 +39,42 @@ def get_slots_for_day(db: Session, teacher_id: str, target_date: date_type, dura
     start_time = rule.start_time
     end_time = rule.end_time
     
-    current_time = datetime.combine(target_date, start_time)
-    end_working_time = datetime.combine(target_date, end_time)
+    # Local datetimes relative to Madrid time
+    local_start = datetime.combine(target_date, start_time).replace(tzinfo=MADRID_TZ)
+    local_end = datetime.combine(target_date, end_time).replace(tzinfo=MADRID_TZ)
     
-    # Get existing scheduled lessons for this day
+    # Convert local start/end availability to UTC
+    utc_start = local_start.astimezone(timezone.utc)
+    utc_end = local_end.astimezone(timezone.utc)
+    
+    # Get existing scheduled lessons in UTC (stored naive in database)
     existing_lessons = db.query(models.Lesson).filter(
         models.Lesson.teacher_id == teacher_id,
-        models.Lesson.start_time >= current_time,
-        models.Lesson.start_time < end_working_time,
+        models.Lesson.start_time >= utc_start.replace(tzinfo=None),
+        models.Lesson.start_time < utc_end.replace(tzinfo=None),
         models.Lesson.status == "scheduled"
     ).all()
     
-    # Generate 30-min candidate slots
     slots = []
-    scan_time = current_time
+    scan_time = utc_start
     
-    # We enforce 12 hours ahead constraint
-    cutoff_time = datetime.utcnow() + timedelta(hours=12)
+    # We enforce 12 hours ahead constraint in UTC
+    cutoff_time = datetime.now(timezone.utc) + timedelta(hours=12)
     
-    while scan_time + timedelta(minutes=duration) <= end_working_time:
+    while scan_time + timedelta(minutes=duration) <= utc_end:
         # Check overlaps
         slot_end = scan_time + timedelta(minutes=duration)
         overlap = False
         for l in existing_lessons:
-            l_end = l.start_time + timedelta(minutes=l.duration)
-            if (scan_time < l_end and slot_end > l.start_time):
+            # l.start_time is stored naive UTC. Convert it to timezone-aware UTC datetime
+            l_start_utc = l.start_time.replace(tzinfo=timezone.utc)
+            l_end_utc = l_start_utc + timedelta(minutes=l.duration)
+            if (scan_time < l_end_utc and slot_end > l_start_utc):
                 overlap = True
                 break
         
         if not overlap and scan_time > cutoff_time:
-            slots.append(scan_time.isoformat() + "Z")
+            slots.append(scan_time.strftime("%Y-%m-%dT%H:%M:%SZ"))
                 
         scan_time += timedelta(minutes=30) # Step by 30 mins
         
@@ -100,7 +110,7 @@ def get_teacher_lessons(teacher_id: str, db: Session = Depends(database.get_db))
             "student_name": student.name if student else "Unknown",
             "student_email": student.email if student else "",
             "lesson_type": l.lesson_type,
-            "start_time": l.start_time.isoformat() if l.start_time else None,
+            "start_time": (l.start_time.isoformat() + "Z") if l.start_time else None,
             "duration": l.duration,
             "price": l.price,
             "status": l.status,
@@ -112,8 +122,9 @@ def get_teacher_lessons(teacher_id: str, db: Session = Depends(database.get_db))
 
 @router.post("/", response_model=dict)
 def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.get_db)):
-    # 0. Enforce 12 hour cutoff
-    if lesson.start_time.replace(tzinfo=None) < datetime.utcnow() + timedelta(hours=12):
+    # 0. Convert start_time to UTC and enforce 12 hour cutoff in UTC
+    utc_start = lesson.start_time.astimezone(timezone.utc) if lesson.start_time.tzinfo else lesson.start_time.replace(tzinfo=timezone.utc)
+    if utc_start.replace(tzinfo=None) < datetime.utcnow() + timedelta(hours=12):
         raise HTTPException(status_code=400, detail="Lessons must be booked at least 12 hours in advance.")
 
     # 1. Ensure/Create Student
@@ -135,7 +146,7 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         student_id=db_student.id,
         teacher_id=lesson.teacher_id,
         lesson_type=lesson.lesson_type,
-        start_time=lesson.start_time.replace(tzinfo=None), # SQLite naive mapping
+        start_time=utc_start.replace(tzinfo=None), # SQLite naive mapping in UTC
         duration=lesson.duration,
         price=price,
         student_timezone=lesson.student_timezone or "UTC",
@@ -145,45 +156,20 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
     db.commit()
     db.refresh(db_lesson)
 
-    # 4. Create Stripe PaymentIntent for card payment
-    try:
-        payment_intent = stripe.PaymentIntent.create(
-            amount=int(price * 100),  # cents
-            currency="usd",
-            payment_method_types=["card"],  # card + Google Pay, no Amazon Pay
-            metadata={
-                "lesson_id": db_lesson.id,
-                "student_email": lesson.student_email,
-                "student_name": lesson.student_name,
-            },
-            description=f"Spanish Lesson ({lesson.lesson_type}) - {lesson.duration}min",
-        )
-        return {
-            "lesson_id": db_lesson.id,
-            "client_secret": payment_intent.client_secret,
-            "price": price,
-            "student_id": db_student.id,
-            "student_name": db_student.name,
-            "student_email": db_student.email,
-        }
-    except Exception as e:
-        print(f"Stripe PaymentIntent error: {e}")
-        # Fallback: auto-schedule if Stripe fails
-        db_lesson.status = "scheduled"
-        db.commit()
-        return {
-            "lesson_id": db_lesson.id,
-            "client_secret": None,
-            "price": price,
-            "student_id": db_student.id,
-            "student_name": db_student.name,
-            "student_email": db_student.email,
-        }
+    # 4. Return Manual Payment Booking Response
+    return {
+        "lesson_id": db_lesson.id,
+        "client_secret": None,
+        "price": price,
+        "student_id": db_student.id,
+        "student_name": db_student.name,
+        "student_email": db_student.email,
+    }
 
 
 @router.post("/confirm-payment")
 def confirm_payment(data: dict, db: Session = Depends(database.get_db)):
-    """Called by the frontend after Stripe payment succeeds to mark lesson as scheduled and send email."""
+    """Called by the frontend after manual payment completes to notify teacher."""
     lesson_id = data.get("lesson_id")
     if not lesson_id:
         raise HTTPException(status_code=400, detail="lesson_id is required")
@@ -192,10 +178,11 @@ def confirm_payment(data: dict, db: Session = Depends(database.get_db)):
     if not db_lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
     
-    db_lesson.status = "scheduled"
+    # Keep status as pending until teacher manually approves
+    db_lesson.status = "pending"
     db.commit()
     
-    # Send confirmation email
+    # Send manual booking notifications
     from app.utils.email import send_lesson_confirmation, send_teacher_notification
     student = db.query(student_models.Student).filter(student_models.Student.id == db_lesson.student_id).first()
     if student:
@@ -215,7 +202,7 @@ def confirm_payment(data: dict, db: Session = Depends(database.get_db)):
             lesson_type=db_lesson.lesson_type
         )
     
-    return {"status": "confirmed", "lesson_id": lesson_id}
+    return {"status": "pending_approval", "lesson_id": lesson_id}
 
 
 @router.patch("/{lesson_id}/reschedule")
@@ -238,11 +225,10 @@ def reschedule_lesson(lesson_id: str, new_start_time: str, db: Session = Depends
     except Exception:
         raise HTTPException(status_code=400, detail="Invalid date format for new_start_time")
         
-    # Check if the new slot is available (mocking the check or calling get_slots_for_day)
-    # For now, we trust the frontend was based on available slots, but we should re-verify
-    # We release the old slot logically by assuming we're updating this lesson
+    # Convert to UTC and strip tz info for database persistence
+    utc_new_time = new_time.astimezone(timezone.utc) if new_time.tzinfo else new_time.replace(tzinfo=timezone.utc)
     
-    lesson.start_time = new_time
+    lesson.start_time = utc_new_time.replace(tzinfo=None)
     db.commit()
     db.refresh(lesson)
     
@@ -252,13 +238,14 @@ def reschedule_lesson(lesson_id: str, new_start_time: str, db: Session = Depends
     return {
         "status": "success",
         "lesson_id": lesson.id,
-        "new_start_time": lesson.start_time.isoformat()
+        "new_start_time": (lesson.start_time.isoformat() + "Z")
     }
 
 @router.patch("/{lesson_id}/feedback")
 def update_lesson_feedback(
     lesson_id: str, 
     feedback: schemas.LessonFeedbackUpdate, 
+    status: Optional[str] = None,
     db: Session = Depends(database.get_db)
 ):
     db_lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
@@ -272,6 +259,11 @@ def update_lesson_feedback(
     if feedback.feedback_materials is not None:
         db_lesson.feedback_materials = feedback.feedback_materials
         
+    if status is not None:
+        if status not in ["pending", "scheduled", "completed", "cancelled"]:
+            raise HTTPException(status_code=400, detail="Invalid status value")
+        db_lesson.status = status
+
     db.commit()
     db.refresh(db_lesson)
     return db_lesson

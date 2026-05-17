@@ -15,7 +15,7 @@ const LandingPage = () => {
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<number>(60);
     const [submitting, setSubmitting] = useState(false);
-    const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP'>('USD');
+    const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP' | 'CZK'>('USD');
     const [checkoutData, setCheckoutData] = useState<{clientSecret: string | null; lessonId: string; price: number; studentData?: any} | null>(null);
     const [checkoutType, setCheckoutType] = useState<'lesson' | 'package'>('lesson');
     const [formData, setFormData] = useState({
@@ -93,8 +93,8 @@ const LandingPage = () => {
 
     // Base prices in USD
     const basePricesUSD = { 30: 16.33, 45: 23.55, 60: 30.94 };
-    const exchangeRates = { USD: 1, EUR: 0.92, GBP: 0.79 };
-    const currencySymbols = { USD: '$', EUR: '€', GBP: '£' };
+    const exchangeRates = { USD: 1, EUR: 0.92, GBP: 0.79, CZK: 23.50 };
+    const currencySymbols = { USD: '$', EUR: '€', GBP: '£', CZK: 'Kč' };
     const rate = exchangeRates[currency];
     const sym = currencySymbols[currency];
 
@@ -256,8 +256,8 @@ const LandingPage = () => {
                     <div className="text-center mb-16">
                         <h2 className="text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.packages.title')}</h2>
                         <div className="w-24 h-1.5 bg-indigo-600 mx-auto rounded-full mb-8"></div>
-                        <div className="flex justify-center gap-2 mt-4">
-                            {(['USD', 'EUR', 'GBP'] as const).map((c) => (
+                        <div className="flex justify-center gap-2 mt-4 flex-wrap">
+                            {(['USD', 'EUR', 'GBP', 'CZK'] as const).map((c) => (
                                 <button
                                     key={c}
                                     onClick={() => setCurrency(c)}
@@ -267,7 +267,7 @@ const LandingPage = () => {
                                             : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-300'
                                     }`}
                                 >
-                                    {c === 'USD' ? '$ USD' : c === 'EUR' ? '€ EUR' : '£ GBP'}
+                                    {c === 'USD' ? '$ USD' : c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : 'Kč CZK'}
                                 </button>
                             ))}
                         </div>
@@ -442,10 +442,6 @@ const LandingPage = () => {
                             <Link to="/privacy" className="hover:text-indigo-600 transition">Privacidad</Link>
                             <Link to="/cookies" className="hover:text-indigo-600 transition">Cookies</Link>
                         </div>
-                        <Link to={`/book/${martaId}`} className="px-8 py-4 bg-indigo-600 text-white font-black rounded-2xl hover:bg-indigo-700 transition shadow-xl hover:shadow-indigo-500/30 flex items-center gap-2">
-                            <Calendar size={20} />
-                            {t('nav.getStarted')}
-                        </Link>
                     </div>
                 </footer>
             </main>

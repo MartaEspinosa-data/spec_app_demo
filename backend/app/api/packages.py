@@ -6,7 +6,7 @@ from app.models.student import Student
 from app.models.lesson import Lesson
 from app.models import teacher as teacher_models
 from pydantic import BaseModel
-from datetime import datetime, timedelta
+from datetime import datetime, timezone, timedelta
 import stripe
 import os
 
@@ -101,8 +101,9 @@ def book_with_package(data: BookWithPackageRequest, db: Session = Depends(get_db
     if not pkg or pkg.status != "active" or pkg.remaining_lessons <= 0:
         raise HTTPException(status_code=400, detail="No available credits in this package")
 
-    # Enforce 12 hour cutoff
-    if data.start_time.replace(tzinfo=None) < datetime.utcnow() + timedelta(hours=12):
+    # Convert to UTC and enforce 12 hour cutoff in UTC
+    utc_start = data.start_time.astimezone(timezone.utc) if data.start_time.tzinfo else data.start_time.replace(tzinfo=timezone.utc)
+    if utc_start.replace(tzinfo=None) < datetime.utcnow() + timedelta(hours=12):
         raise HTTPException(status_code=400, detail="Lessons must be booked at least 12 hours in advance.")
 
     # Get teacher for context
@@ -115,7 +116,7 @@ def book_with_package(data: BookWithPackageRequest, db: Session = Depends(get_db
         student_id=pkg.student_id,
         teacher_id=data.teacher_id,
         lesson_type=data.lesson_type,
-        start_time=data.start_time.replace(tzinfo=None),
+        start_time=utc_start.replace(tzinfo=None), # SQLite naive mapping in UTC
         duration=pkg.duration,
         price=0,  # Paid via package
         status="scheduled",

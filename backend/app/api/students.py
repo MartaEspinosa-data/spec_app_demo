@@ -118,7 +118,7 @@ def get_student_lessons(student_id: str, db: Session = Depends(get_db)):
         result.append({
             "id": l.id,
             "lesson_type": l.lesson_type,
-            "start_time": l.start_time.isoformat() if l.start_time else None,
+            "start_time": (l.start_time.isoformat() + "Z") if l.start_time else None,
             "duration": l.duration,
             "price": l.price,
             "status": l.status,
