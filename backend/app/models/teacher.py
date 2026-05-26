@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, Float, Text, JSON
+from sqlalchemy import Column, String, Float, Text, JSON, DateTime
 from app.database.database import Base
 import uuid
 
@@ -17,3 +17,6 @@ class Teacher(Base):
     lessons_taught = Column(Float, default=0.0)
     video_url = Column(String)
     calendly_url = Column(String)
+    password_hash = Column(String, nullable=True)  # bcrypt hash, nullable for migration
+    reset_token = Column(String, nullable=True, index=True)  # password reset token
+    reset_token_expiry = Column(DateTime(timezone=True), nullable=True)  # expiration for reset token

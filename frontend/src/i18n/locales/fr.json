@@ -1,7 +1,25 @@
 {
   "nav.brand": "HolaLingo",
+  "landing.single.title": "Leçons Individuelles",
+  "landing.single.subtitle": "Juste une leçon — sans forfait, sans réduction, flexibilité totale.",
+  "landing.single.30min.title": "30 Min Simple",
+  "landing.single.30min.desc": "Une séance de 30 minutes — parfaite pour essayer ou pratiquer une conversation rapide.",
+  "landing.single.45min.title": "45 Min Simple",
+  "landing.single.45min.desc": "Une séance de 45 minutes — équilibre idéal entre profondeur et flexibilité.",
+  "landing.single.60min.title": "60 Min Simple",
+  "landing.single.60min.desc": "Une séance complète de 60 minutes — l'expérience immersive totale.",
+  "landing.single.bookButton": "Réserver",
   "nav.getStarted": "Réserver une Leçon",
   "nav.teacherDashboard": "Tableau de Bord Enseignant",
+
+  "landing.packages.title": "Forfaits de Cours",
+  "landing.packages.was": "avant",
+  "landing.packages.30min.title": "Cours de 30 Min",
+  "landing.packages.30min.desc": "5 cours x 30 minutes — parfait pour une pratique rapide de la conversation. Économisez 3%!",
+  "landing.packages.45min.title": "Cours de 45 Min",
+  "landing.packages.45min.desc": "5 cours x 45 minutes — équilibre idéal entre profondeur et commodité. Économisez 3%!",
+  "landing.packages.60min.title": "Cours de 60 Min",
+  "landing.packages.60min.desc": "5 cours x 60 minutes — l'expérience immersive complète. Économisez 3%!",
 
   "landing.badge": "Améliorez Votre Espagnol",
   "landing.hero.title": "Apprenez l'Espagnol avec un ",
@@ -33,6 +51,9 @@
   "booking.cancel": "Annuler la Réservation",
   "booking.priceLocked": "Prix fixé : ${price}/heure",
   "booking.nextSteps": "Prochaines Étapes",
+  "booking.selectSlot": "Sélectionnez un Créneau",
+  "booking.confirmPayment": "Confirmer la Réservation",
+  "booking.manualPaymentNote": "Paiement manuel — vous recevrez les instructions de paiement",
   "booking.step1": "Sélectionnez le créneau horaire qui vous convient le mieux.",
   "booking.step2": "Confirmez vos coordonnées et passez au paiement.",
   "booking.step3": "Veuillez payer via Payoneer pour garantir votre place.",
@@ -67,5 +88,10 @@
 
   "notfound.title": "Perdu dans la Traduction ?",
   "notfound.subtitle": "Nous n'avons pas trouvé la page que vous cherchez. Retournons en classe.",
-  "notfound.returnHome": "Retour à l'Accueil"
+  "notfound.returnHome": "Retour à l'Accueil",
+  "lesson.cancelPrompt": "Êtes-vous sûr de vouloir annuler ce cours ? Le créneau horaire sera disponible pour d'autres étudiants.",
+  "lesson.cancelling": "Annulation...",
+  "lesson.cancelButton": "Annuler le Cours",
+  "lesson.cancelSuccess": "Cours annulé avec succès. Le créneau est maintenant disponible.",
+  "lesson.cancelError": "Impossible d'annuler le cours. Il reste peut-être moins de 24h avant le début."
 }

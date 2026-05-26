@@ -1,10 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import Dict, Any
+
 from app.database.database import get_db
 from app.models.availability import TeacherAvailability
 from app.schemas.availability import TeacherAvailabilityResponse, TeacherAvailabilityUpdate, AvailabilitySlotBase
+from app.utils.auth import require_teacher
 
-router = APIRouter(prefix="/api/availability", tags=["availability"])
+router = APIRouter(prefix="/api/v1/availability", tags=["availability"])
 
 @router.get("/teacher/{teacher_id}", response_model=TeacherAvailabilityResponse)
 def get_teacher_availability(teacher_id: str, db: Session = Depends(get_db)):
@@ -12,7 +15,7 @@ def get_teacher_availability(teacher_id: str, db: Session = Depends(get_db)):
     return {"availability": slots}
 
 @router.post("/teacher/{teacher_id}", response_model=TeacherAvailabilityResponse)
-def update_teacher_availability(teacher_id: str, payload: TeacherAvailabilityUpdate, db: Session = Depends(get_db)):
+def update_teacher_availability(teacher_id: str, payload: TeacherAvailabilityUpdate, user: Dict[str, Any] = Depends(require_teacher), db: Session = Depends(get_db)):
     # Only delete RECURRING slots (day_of_week), preserve specific_date overrides
     db.query(TeacherAvailability).filter(
         TeacherAvailability.teacher_id == teacher_id,
@@ -34,7 +37,7 @@ def update_teacher_availability(teacher_id: str, payload: TeacherAvailabilityUpd
     return {"availability": slots}
 
 @router.post("/teacher/{teacher_id}/override")
-def add_date_override(teacher_id: str, payload: AvailabilitySlotBase, db: Session = Depends(get_db)):
+def add_date_override(teacher_id: str, payload: AvailabilitySlotBase, user: Dict[str, Any] = Depends(require_teacher), db: Session = Depends(get_db)):
     """Add or update a specific date override."""
     if not payload.specific_date:
         raise HTTPException(status_code=400, detail="specific_date is required for overrides")
@@ -58,7 +61,7 @@ def add_date_override(teacher_id: str, payload: AvailabilitySlotBase, db: Sessio
     return {"status": "ok", "id": slot.id}
 
 @router.delete("/teacher/{teacher_id}/override/{override_id}")
-def delete_date_override(teacher_id: str, override_id: str, db: Session = Depends(get_db)):
+def delete_date_override(teacher_id: str, override_id: str, user: Dict[str, Any] = Depends(require_teacher), db: Session = Depends(get_db)):
     deleted = db.query(TeacherAvailability).filter(
         TeacherAvailability.id == override_id,
         TeacherAvailability.teacher_id == teacher_id,

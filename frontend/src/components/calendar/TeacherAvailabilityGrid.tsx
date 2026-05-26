@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Save, Loader, Plus, Trash2, CalendarPlus } from 'lucide-react';
+import apiClient from '../../services/apiClient';
 
 interface AvailabilitySlot {
   day_of_week: number;
@@ -11,6 +12,17 @@ interface AvailabilitySlot {
 interface DateOverride {
   id: string;
   specific_date: string;
+  start_time: string;
+  end_time: string;
+  is_available: boolean;
+}
+
+/** Shape of individual availability records returned by the API. */
+interface ApiAvailabilityRecord {
+  id: string;
+  teacher_id: string;
+  day_of_week: number | null;
+  specific_date: string | null;
   start_time: string;
   end_time: string;
   is_available: boolean;
@@ -41,16 +53,14 @@ export const TeacherAvailabilityGrid = ({ teacherId }: { teacherId: string }) =>
 
   const fetchAvailability = async () => {
     try {
-      const response = await fetch(`http://localhost:8000/api/availability/teacher/${teacherId}`);
-      if (!response.ok) throw new Error('Failed to load availability');
-      
-      const data = await response.json();
+      const response = await apiClient.get(`/availability/teacher/${teacherId}`);
+      const data = response.data;
       
       // Separate recurring vs date overrides
       const recurring: AvailabilitySlot[] = [];
       const dateOverrides: DateOverride[] = [];
       
-      data.availability?.forEach((a: any) => {
+      data.availability?.forEach((a: ApiAvailabilityRecord) => {
         if (a.specific_date) {
           dateOverrides.push({
             id: a.id,
@@ -104,13 +114,9 @@ export const TeacherAvailabilityGrid = ({ teacherId }: { teacherId: string }) =>
           end_time: `${a.end_time}:00`
         }));
 
-      const res = await fetch(`http://localhost:8000/api/availability/teacher/${teacherId}`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ availability: payload })
+      await apiClient.post(`/availability/teacher/${teacherId}`, {
+        availability: payload
       });
-      
-      if (!res.ok) throw new Error('Failed to save');
       setSuccessMsg('Weekly schedule saved!');
       setTimeout(() => setSuccessMsg(''), 3000);
     } catch (err) {
@@ -126,17 +132,12 @@ export const TeacherAvailabilityGrid = ({ teacherId }: { teacherId: string }) =>
     setSavingOverride(true);
     setError(null);
     try {
-      const res = await fetch(`http://localhost:8000/api/availability/teacher/${teacherId}/override`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          specific_date: newOverrideDate,
-          start_time: `${newOverrideStart}:00`,
-          end_time: `${newOverrideEnd}:00`,
-          is_available: newOverrideAvailable,
-        })
+      await apiClient.post(`/availability/teacher/${teacherId}/override`, {
+        specific_date: newOverrideDate,
+        start_time: `${newOverrideStart}:00`,
+        end_time: `${newOverrideEnd}:00`,
+        is_available: newOverrideAvailable,
       });
-      if (!res.ok) throw new Error('Failed to save override');
       
       setNewOverrideDate('');
       setNewOverrideStart('09:00');
@@ -155,9 +156,7 @@ export const TeacherAvailabilityGrid = ({ teacherId }: { teacherId: string }) =>
 
   const handleDeleteOverride = async (overrideId: string) => {
     try {
-      await fetch(`http://localhost:8000/api/availability/teacher/${teacherId}/override/${overrideId}`, {
-        method: 'DELETE'
-      });
+      await apiClient.delete(`/availability/teacher/${teacherId}/override/${overrideId}`);
       await fetchAvailability();
     } catch (err) {
       console.error(err);

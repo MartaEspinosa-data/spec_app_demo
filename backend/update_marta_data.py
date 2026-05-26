@@ -41,12 +41,12 @@ En esta clase nos centraremos en mejorar la pronunciación y el acento para que 
 Tengo muchos recursos como artículos, videos, juegos que pueden generar muchas conversaciones interesantes diferentes."""
         
         marta.pricing_schema = {
-            "30": 16.33,
-            "45": 23.55,
-            "60": 30.94
+            "30": 16.34,
+            "45": 23.56,
+            "60": 30.95
         }
         # Update base price_per_hour for legacy support if needed
-        marta.price_per_hour = 30.94
+        marta.price_per_hour = 30.95
         
         db.commit()
         print(f"Updated teacher {marta.name} with new bio and pricing schema.")

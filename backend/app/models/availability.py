@@ -16,8 +16,8 @@ class TeacherAvailability(Base):
     day_of_week = Column(Integer, nullable=True)  # 0 = Monday, 1 = Tuesday, etc.
     specific_date = Column(Date, nullable=True)   # Override for a specific calendar date
     
-    start_time = Column(Time(timezone=False), nullable=False) # Stored as UTC Time
-    end_time = Column(Time(timezone=False), nullable=False)   # Stored as UTC Time
+    start_time = Column(Time(timezone=False), nullable=False) # Madrid local wall-clock time
+    end_time = Column(Time(timezone=False), nullable=False)   # Madrid local wall-clock time
     
     is_available = Column(Boolean, default=True, nullable=False)
     

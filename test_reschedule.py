@@ -24,7 +24,7 @@ if row:
     conn.commit()
     
     try:
-        r = requests.patch(f"http://localhost:8000/api/lessons/{lesson_id}/reschedule?new_start_time=2026-05-01T10:00:00Z")
+        r = requests.patch(f"http://localhost:8000/api/v1/lessons/{lesson_id}/reschedule?new_start_time=2026-05-01T10:00:00Z")
         print(f"Failure case result: {r.status_code} - {r.json()}")
     except Exception as e:
         print(f"Request failed: {e}")
@@ -36,7 +36,7 @@ if row:
     conn.commit()
     
     try:
-        r = requests.patch(f"http://localhost:8000/api/lessons/{lesson_id}/reschedule?new_start_time=2026-05-01T10:00:00Z")
+        r = requests.patch(f"http://localhost:8000/api/v1/lessons/{lesson_id}/reschedule?new_start_time=2026-05-01T10:00:00Z")
         print(f"Success case result: {r.status_code} - {r.json()}")
     except Exception as e:
         print(f"Request failed: {e}")

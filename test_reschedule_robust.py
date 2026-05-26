@@ -36,7 +36,7 @@ print(f"Testing with lesson_id: {lesson_id}")
 # 1. SUCCESS CASE (> 24h)
 # Already set to far_time if newly created, or just use existing
 try:
-    r = requests.patch(f"http://localhost:8000/api/lessons/{lesson_id}/reschedule?new_start_time=2026-06-01T10:00:00Z")
+    r = requests.patch(f"http://localhost:8000/api/v1/lessons/{lesson_id}/reschedule?new_start_time=2026-06-01T10:00:00Z")
     print(f"Success case result: {r.status_code} - {r.json()}")
 except Exception as e:
     print(f"Request failed: {e}")
@@ -49,7 +49,7 @@ cursor.execute("UPDATE lessons SET start_time = ? WHERE id = ?", (near_time.isof
 conn.commit()
 
 try:
-    r = requests.patch(f"http://localhost:8000/api/lessons/{lesson_id}/reschedule?new_start_time=2026-06-01T12:00:00Z")
+    r = requests.patch(f"http://localhost:8000/api/v1/lessons/{lesson_id}/reschedule?new_start_time=2026-06-01T12:00:00Z")
     print(f"Failure case result: {r.status_code} - {r.json()}")
 except Exception as e:
     print(f"Request failed: {e}")

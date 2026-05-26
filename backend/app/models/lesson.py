@@ -13,13 +13,12 @@ class Lesson(Base):
     student_id = Column(String, ForeignKey("students.id"), nullable=False)
     teacher_id = Column(String, ForeignKey("teachers.id"), nullable=False)
     lesson_type = Column(String, nullable=False)  # e.g., 'conversation'
-    start_time = Column(DateTime(timezone=True), nullable=False)
+    start_time = Column(DateTime(timezone=False), nullable=False)
     duration = Column(Integer, default=60)  # in minutes
     price = Column(Float, nullable=False)
     status = Column(String, default="pending")  # pending, scheduled, completed, cancelled
     student_timezone = Column(String, default="UTC", nullable=False)
     meeting_link = Column(String, nullable=True, default="https://meet.google.com/pyv-dxwi-mxc")
-    calendly_event_id = Column(String, unique=True, nullable=True) # DEPRECATED: Switched to custom teacher calendar
     
     # Pedagogical Feedback
     feedback_vocabulary = Column(String, nullable=True)

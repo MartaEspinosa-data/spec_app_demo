@@ -10,13 +10,13 @@ const TeacherProfile = ({ teacher }: Props) => {
     const { t } = useLanguage();
 
     return (
-        <div className="bg-white rounded-xl shadow-lg p-8 max-w-4xl mx-auto my-12 border border-gray-100 transition-all hover:shadow-xl">
-            <div className="flex flex-col md:flex-row gap-8 items-start">
-                <div className="w-full md:w-1/3 flex flex-col items-center gap-4">
-                    <div className="w-48 h-48 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
-                        <UserIcon size={80} strokeWidth={1.5} />
+        <div className="bg-white rounded-xl shadow-lg p-4 sm:p-8 max-w-4xl mx-auto my-8 sm:my-12 border border-gray-100 transition-all hover:shadow-xl">
+            <div className="flex flex-col md:flex-row gap-6 sm:gap-8 items-start">
+                <div className="w-full md:w-1/3 flex flex-col items-center gap-3 sm:gap-4">
+                    <div className="w-32 h-32 sm:w-48 sm:h-48 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white shadow-md">
+                        <UserIcon size={60} strokeWidth={1.5} />
                     </div>
-                    <h2 className="text-3xl font-bold text-gray-800 text-center">{teacher.name}</h2>
+                    <h2 className="text-2xl sm:text-3xl font-bold text-gray-800 text-center">{teacher.name}</h2>
                     <div className="flex flex-wrap justify-center gap-2 mt-2">
                         {teacher.languages.map((lang, idx) => (
                             <span key={idx} className="px-3 py-1 bg-indigo-50 text-indigo-700 text-sm font-medium rounded-full border border-indigo-100 flex items-center gap-1.5">

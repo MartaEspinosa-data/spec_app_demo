@@ -1,6 +1,6 @@
 import axios from 'axios';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000/api';
+import { API_URL } from '../config';
+// Note: teacher profile endpoints are public, so we use raw axios (no auth needed)
 
 export interface Teacher {
     id: string;

@@ -1,34 +1,61 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Lock, Mail, KeyRound } from 'lucide-react';
+import { API_URL } from '../config';
+import { useToast } from '../components/Toast';
 
 const TeacherLogin = () => {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const { addToast } = useToast();
 
-    const handleLogin = (e: React.FormEvent) => {
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
-        // MVP authentication
-        if (email.toLowerCase() === 'martaespinosagarcia@gmail.com' && password === '4565') {
-            localStorage.setItem('teacher_auth', 'true');
+        setError('');
+        setLoading(true);
+
+        try {
+            const res = await fetch(`${API_URL}/teachers/login`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password }),
+            });
+
+            if (!res.ok) {
+                const data = await res.json();
+                const msg = data.detail || 'Acceso denegado. Credenciales incorrectas.';
+                setError(msg);
+                addToast('error', msg);
+                setLoading(false);
+                return;
+            }
+
+            const data = await res.json();
+            // Store full response including access_token for JWT auth
+            localStorage.setItem('teacher_auth', JSON.stringify(data));
+            addToast('success', 'Welcome, teacher!');
             navigate('/teacher/dashboard');
-        } else {
-            setError('Acceso denegado. Credenciales incorrectas.');
+        } catch (err: any) {
+            const msg = err.message || 'Connection error. Please try again.';
+            setError(msg);
+            addToast('error', msg);
+            setLoading(false);
         }
     };
 
     return (
         <div className="min-h-screen bg-[#f0f2f5] flex items-center justify-center p-4">
-            <div className="bg-white p-10 rounded-[2.5rem] shadow-2xl border border-gray-100 w-full max-w-md relative overflow-hidden">
+            <div className="bg-white p-6 sm:p-10 rounded-2xl sm:rounded-[2.5rem] shadow-2xl border border-gray-100 w-full max-w-md relative overflow-hidden">
                 <div className="relative z-10">
-                    <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-8 mx-auto shadow-inner">
-                        <Lock size={32} className="text-indigo-600" />
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mb-6 sm:mb-8 mx-auto shadow-inner">
+                        <Lock size={28} className="text-indigo-600" />
                     </div>
                     
-                    <h1 className="text-3xl font-black text-center text-gray-900 mb-2">Teacher Login</h1>
-                    <p className="text-center text-gray-500 font-medium mb-8">Access your availability dashboard.</p>
+                    <h1 className="text-2xl sm:text-3xl font-black text-center text-gray-900 mb-2">Teacher Login</h1>
+                    <p className="text-center text-gray-500 font-medium text-sm sm:text-base mb-6 sm:mb-8">Access your availability dashboard.</p>
 
                     <form onSubmit={handleLogin} className="flex flex-col gap-6">
                         <div className="space-y-2">
@@ -73,11 +100,21 @@ const TeacherLogin = () => {
 
                         <button
                             type="submit"
-                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all active:scale-95 mt-2"
+                            disabled={loading}
+                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all active:scale-95 mt-2 disabled:opacity-50"
                         >
-                            Sign In
+                            {loading ? 'Signing in...' : 'Sign In'}
                         </button>
                     </form>
+
+                    <div className="mt-6 text-center">
+                        <Link
+                            to="/teacher/forgot-password"
+                            className="text-sm font-bold text-gray-400 hover:text-indigo-600 transition"
+                        >
+                            Forgot your password?
+                        </Link>
+                    </div>
                 </div>
 
                 {/* Decorative background shape */}

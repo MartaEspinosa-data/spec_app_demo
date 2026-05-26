@@ -1,11 +1,14 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, BookOpen } from 'lucide-react';
+import { API_URL } from '../config';
+import { useToast } from '../components/Toast';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 
 const StudentLogin = () => {
     const navigate = useNavigate();
+    const { addToast } = useToast();
     const [isRegister, setIsRegister] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
@@ -17,12 +20,12 @@ const StudentLogin = () => {
         setLoading(true);
 
         try {
-            const endpoint = isRegister ? '/api/students/register' : '/api/students/login';
+            const endpoint = isRegister ? `${API_URL}/students/register` : `${API_URL}/students/login`;
             const body = isRegister
                 ? { name: form.name, email: form.email, password: form.password }
                 : { email: form.email, password: form.password };
 
-            const res = await fetch(`http://localhost:8000${endpoint}`, {
+            const res = await fetch(endpoint, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -30,15 +33,22 @@ const StudentLogin = () => {
 
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.detail || 'Authentication failed');
+                const msg = data.detail || 'Authentication failed';
+                setError(msg);
+                addToast('error', msg); // Also show as toast for consistency
+                setLoading(false);
+                return;
             }
 
             const data = await res.json();
+            // Store full response including access_token for JWT auth
             localStorage.setItem('student_auth', JSON.stringify(data));
+            addToast('success', isRegister ? 'Account created successfully!' : 'Welcome back!');
             navigate('/dashboard');
         } catch (err: any) {
-            setError(err.message);
-        } finally {
+            const msg = err.message || 'Connection error. Please try again.';
+            setError(msg);
+            addToast('error', msg);
             setLoading(false);
         }
     };
@@ -49,7 +59,7 @@ const StudentLogin = () => {
         try {
             const decoded: any = jwtDecode(credentialResponse.credential);
             
-            const res = await fetch('http://localhost:8000/api/students/google-login', {
+            const res = await fetch(`${API_URL}/students/google-login`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -62,36 +72,43 @@ const StudentLogin = () => {
 
             if (!res.ok) {
                 const data = await res.json();
-                throw new Error(data.detail || 'Google Login failed');
+                const msg = data.detail || 'Google Login failed';
+                setError(msg);
+                addToast('error', msg);
+                setLoading(false);
+                return;
             }
 
             const data = await res.json();
+            // Store full response including access_token for JWT auth
             localStorage.setItem('student_auth', JSON.stringify(data));
+            addToast('success', 'Welcome! You are now signed in.');
             navigate('/dashboard');
         } catch (err: any) {
-            setError(err.message);
-        } finally {
+            const msg = err.message || 'Connection error. Please try again.';
+            setError(msg);
+            addToast('error', msg);
             setLoading(false);
         }
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-6">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4 sm:p-6">
             <div className="w-full max-w-md">
-                <div className="text-center mb-10">
-                    <Link to="/" className="inline-flex items-center gap-2 text-indigo-600 font-black text-2xl tracking-tighter uppercase hover:text-indigo-700 transition">
-                        <BookOpen size={28} />
+                <div className="text-center mb-6 sm:mb-10">
+                    <Link to="/" className="inline-flex items-center gap-2 text-indigo-600 font-black text-xl sm:text-2xl tracking-tighter uppercase hover:text-indigo-700 transition">
+                        <BookOpen size={24} />
                         SPANISH WITH MARTA
                     </Link>
-                    <h1 className="text-3xl font-black text-gray-900 mt-6 mb-2">
+                    <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mt-4 sm:mt-6 mb-2">
                         {isRegister ? 'Create Account' : 'Student Login'}
                     </h1>
-                    <p className="text-gray-500 font-medium">
+                    <p className="text-gray-500 font-medium text-sm sm:text-base">
                         {isRegister ? 'Sign up to track your lessons and packages' : 'Access your booked lessons and packages'}
                     </p>
                 </div>
 
-                <div className="bg-white rounded-3xl shadow-2xl border border-gray-100 p-8">
+                <div className="bg-white rounded-2xl sm:rounded-3xl shadow-2xl border border-gray-100 p-5 sm:p-8">
                     {error && (
                         <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 font-bold text-sm text-center border border-red-100">
                             {error}
@@ -181,13 +198,23 @@ const StudentLogin = () => {
                         />
                     </div>
 
-                    <div className="mt-8 text-center">
+                    <div className="mt-8 text-center space-y-3">
                         <button
                             onClick={() => { setIsRegister(!isRegister); setError(''); }}
                             className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition"
                         >
                             {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
                         </button>
+                        {!isRegister && (
+                            <div>
+                                <Link
+                                    to="/student/forgot-password"
+                                    className="text-sm font-bold text-gray-400 hover:text-indigo-600 transition"
+                                >
+                                    Forgot your password?
+                                </Link>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

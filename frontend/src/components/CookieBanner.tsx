@@ -22,8 +22,8 @@ export const CookieBanner = () => {
     if (!isVisible) return null;
 
     return (
-        <div className="fixed bottom-6 left-6 right-6 md:left-auto md:right-8 md:max-w-md z-[100] animate-bounce-subtle">
-            <div className="bg-white/90 backdrop-blur-xl border border-indigo-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-3xl p-6 md:p-8 relative overflow-hidden group">
+        <div className="fixed bottom-4 left-4 right-4 sm:bottom-6 sm:left-6 sm:right-auto sm:max-w-md z-[100] animate-bounce-subtle">
+            <div className="bg-white/90 backdrop-blur-xl border border-indigo-100 shadow-[0_20px_50px_rgba(0,0,0,0.15)] rounded-2xl sm:rounded-3xl p-5 sm:p-6 md:p-8 relative overflow-hidden group">
                 {/* Decoration */}
                 <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-50 rounded-full blur-3xl -z-0 opacity-50 group-hover:scale-110 transition-transform duration-700"></div>
 
@@ -42,7 +42,7 @@ export const CookieBanner = () => {
                     </div>
 
                     <p className="text-sm text-gray-600 font-medium leading-relaxed mb-6">
-                        Utilizamos cookies para que disfrutes de la mejor experiencia, procesar pagos seguros con Stripe y permitir el acceso con Google. Al continuar, aceptas nuestra <Link to="/cookies" className="text-indigo-600 underline">Política de Cookies</Link>.
+                        Utilizamos cookies para que disfrutes de la mejor experiencia y permitir el acceso con Google. Al continuar, aceptas nuestra <Link to="/cookies" className="text-indigo-600 underline">Política de Cookies</Link>.
                     </p>
 
                     <div className="flex flex-col sm:flex-row gap-3">

@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
 import axios from 'axios';
+import { API_URL } from '../config';
+// Note: slots endpoint is public (no auth required) so we use raw axios here
 
 interface Props {
     teacherId: string;
@@ -20,7 +22,7 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
         setLoading(true);
         try {
             const dateStr = date.toISOString().split('T')[0];
-            const response = await axios.get(`http://localhost:8000/api/lessons/slots?teacher_id=${teacherId}&date=${dateStr}`);
+            const response = await axios.get(`${API_URL}/lessons/slots?teacher_id=${teacherId}&date=${dateStr}`);
             setAvailableSlots(response.data.slots);
         } catch (err) {
             console.error('Error fetching slots:', err);
@@ -70,11 +72,11 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
     }
 
     return (
-        <div className="bg-white rounded-[2.5rem] p-8 shadow-2xl border border-gray-100 flex flex-col md:flex-row gap-10">
+        <div className="bg-white rounded-2xl sm:rounded-[2.5rem] p-4 sm:p-8 shadow-2xl border border-gray-100 flex flex-col md:flex-row gap-6 sm:gap-10">
             {/* Calendar View */}
             <div className="flex-1">
-                <div className="flex items-center justify-between mb-8">
-                    <h3 className="text-2xl font-black text-gray-900 flex items-center gap-3">
+                <div className="flex items-center justify-between mb-6 sm:mb-8">
+                    <h3 className="text-xl sm:text-2xl font-black text-gray-900 flex items-center gap-3">
                         <CalendarIcon size={24} className="text-indigo-600" />
                         {monthName} {year}
                     </h3>

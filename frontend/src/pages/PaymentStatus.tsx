@@ -10,10 +10,10 @@ export const PaymentSuccess = () => {
     const { t } = useLanguage();
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-green-50 px-6 text-center">
-            <CheckCircle size={100} className="text-green-500 mb-8 animate-bounce" />
-            <h1 className="text-5xl font-black text-gray-900 mb-4 tracking-tight">{t('payment.success.title')}</h1>
-            <p className="text-xl text-gray-600 mb-8 max-w-md mx-auto font-medium">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-green-50 px-4 sm:px-6 text-center">
+            <CheckCircle size={80} className="text-green-500 mb-6 sm:mb-8 animate-bounce" />
+            <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">{t('payment.success.title')}</h1>
+            <p className="text-base sm:text-xl text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto font-medium px-2">
                 {t('payment.success.subtitle')}
             </p>
 
@@ -62,10 +62,10 @@ export const PaymentCancelled = () => {
     const { t } = useLanguage();
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 px-6 text-center">
-            <XCircle size={100} className="text-red-500 mb-8" />
-            <h1 className="text-5xl font-black text-gray-900 mb-4 tracking-tight">{t('payment.cancelled.title')}</h1>
-            <p className="text-xl text-gray-600 mb-12 max-w-md mx-auto font-medium">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 px-4 sm:px-6 text-center">
+            <XCircle size={80} className="text-red-500 mb-6 sm:mb-8" />
+            <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">{t('payment.cancelled.title')}</h1>
+            <p className="text-base sm:text-xl text-gray-600 mb-8 sm:mb-12 max-w-md mx-auto font-medium px-2">
                 {t('payment.cancelled.subtitle')}
             </p>
             <Link to="/" className="flex items-center gap-3 px-10 py-5 bg-indigo-600 text-white text-xl font-bold rounded-2xl hover:bg-indigo-700 transition-all shadow-xl hover:shadow-indigo-400/30 active:scale-95 group">

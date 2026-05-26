@@ -1,17 +1,15 @@
-import { useLanguage } from '../i18n';
 import { ShieldCheck, Mail, MapPin, User } from 'lucide-react';
 
 const LegalNotice = () => {
-    const { t } = useLanguage();
 
     return (
-        <div className="bg-[#f0f2f5] min-h-screen pt-32 pb-20 px-4 md:px-8">
-            <div className="max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-16 shadow-xl border border-gray-100">
-                <div className="flex items-center gap-4 mb-8">
-                    <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                        <ShieldCheck size={32} />
+        <div className="bg-[#f0f2f5] min-h-screen pt-20 sm:pt-32 pb-20 px-4 sm:px-6 md:px-8">
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl sm:rounded-[2.5rem] p-6 sm:p-8 md:p-16 shadow-xl border border-gray-100">
+                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                        <ShieldCheck size={28} />
                     </div>
-                    <h1 className="text-4xl font-black text-gray-900">Aviso Legal</h1>
+                    <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Aviso Legal</h1>
                 </div>
 
                 <div className="space-y-8 text-gray-600 leading-relaxed font-medium">

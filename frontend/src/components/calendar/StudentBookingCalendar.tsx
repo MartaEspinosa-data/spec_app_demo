@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ChevronLeft, ChevronRight, Loader } from 'lucide-react';
 import { format, addDays, startOfWeek, isBefore, startOfDay, addMinutes } from 'date-fns';
 import { formatTimeInLocalzone, getLocalTimezone } from '../../utils/timezones';
+import { API_URL } from '../../config';
 
 export const StudentBookingCalendar = ({ 
   teacherId, 
@@ -33,7 +34,7 @@ export const StudentBookingCalendar = ({
       const dateString = format(date, 'yyyy-MM-dd');
       // Later in US3, we can pass durationMinutes to the API to filter slots dynamically
       // For now, we fetch all 30-min candidate slots
-      const response = await fetch(`http://localhost:8000/api/lessons/slots?teacher_id=${teacherId}&date=${dateString}&duration=${durationMinutes}`);
+      const response = await fetch(`${API_URL}/lessons/slots?teacher_id=${teacherId}&date=${dateString}&duration=${durationMinutes}`);
       if (!response.ok) throw new Error('Failed to fetch slots');
       const data = await response.json();
       setSlots(data.slots || []);
@@ -48,11 +49,11 @@ export const StudentBookingCalendar = ({
   const isDayDisabled = (day: Date) => isBefore(day, startOfDay(new Date()));
 
   return (
-    <div className="bg-white rounded-3xl p-8 border border-gray-100 shadow-xl max-w-2xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="bg-white rounded-2xl sm:rounded-3xl p-4 sm:p-8 border border-gray-100 shadow-xl max-w-2xl mx-auto">
+      <div className="flex items-center justify-between mb-6 sm:mb-8">
         <div>
-          <h2 className="text-2xl font-black text-gray-900">Select a Date & Time</h2>
-          <p className="text-indigo-600 font-medium text-sm mt-1 bg-indigo-50 inline-block px-3 py-1 rounded-full">
+          <h2 className="text-xl sm:text-2xl font-black text-gray-900">Select a Date & Time</h2>
+          <p className="text-indigo-600 font-medium text-xs sm:text-sm mt-1 bg-indigo-50 inline-block px-2 sm:px-3 py-1 rounded-full">
             Times shown in {getLocalTimezone()}
           </p>
         </div>
@@ -112,7 +113,7 @@ export const StudentBookingCalendar = ({
           )}
 
           {!loading && !error && slots.length > 0 && (
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
               {slots.map((slotIso) => {
                 const startTime = new Date(slotIso);
                 const endTime = addMinutes(startTime, durationMinutes);

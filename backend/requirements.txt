@@ -1,0 +1,14 @@
+fastapi>=0.115.0
+uvicorn>=0.34.0
+sqlalchemy>=2.0.0
+python-dotenv>=1.0.0
+alembic>=1.14.0
+pydantic[email]>=2.0.0
+email-validator>=2.0.0
+apscheduler>=3.11.0
+
+# Auth
+bcrypt>=4.2.0
+python-jose[cryptography]>=3.3.0
+
+# Database (for SQLite, included; for Postgres, add psycopg2-binary)

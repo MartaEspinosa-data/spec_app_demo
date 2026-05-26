@@ -1,27 +1,43 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
+from typing import Dict, Any, Optional
+import zoneinfo
+
 from app.database.database import get_db
 from app.models.package import StudentPackage
 from app.models.student import Student
 from app.models.lesson import Lesson
 from app.models import teacher as teacher_models
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from datetime import datetime, timezone, timedelta
-import stripe
-import os
 
-router = APIRouter(prefix="/api/packages", tags=["packages"])
-stripe.api_key = os.getenv("STRIPE_API_KEY", "sk_test_placeholder")
+from app.utils.auth import require_student
 
-# Pricing: base prices in USD with 3% discount for packages
-BASE_PRICES = {30: 18.50, 45: 23.50, 60: 30.94}
+router = APIRouter(prefix="/api/v1/packages", tags=["packages"])
+
+# Pricing: base prices in EUR with 3% discount for packages
+BASE_PRICES = {30: 16.34, 45: 23.56, 60: 30.95}
 PACKAGE_DISCOUNT = 0.03
 LESSONS_PER_PACKAGE = 5
+
+VALID_DURATIONS = {30, 45, 60}
+VALID_LESSON_TYPES = [
+    "Conversación", "Conversacion", "Curso Básico", "Curso Basico",
+    "Basic Course", "Conversation", "Examen DELE",
+    "Entrevista de Trabajo", "Grammar", "Gramática",
+]
 
 
 class PurchasePackageRequest(BaseModel):
     student_id: str
     duration: int  # 30, 45, or 60
+
+    @field_validator("duration")
+    @classmethod
+    def validate_duration(cls, v: int) -> int:
+        if v not in VALID_DURATIONS:
+            raise ValueError(f"Invalid duration {v}. Must be one of: {sorted(VALID_DURATIONS)}")
+        return v
 
 
 class BookWithPackageRequest(BaseModel):
@@ -31,9 +47,25 @@ class BookWithPackageRequest(BaseModel):
     start_time: datetime
     student_timezone: str = "UTC"
 
+    @field_validator("lesson_type")
+    @classmethod
+    def validate_lesson_type(cls, v: str) -> str:
+        if v not in VALID_LESSON_TYPES:
+            raise ValueError(f"Invalid lesson_type '{v}'. Must be one of: {', '.join(VALID_LESSON_TYPES)}")
+        return v
+
+    @field_validator("student_timezone")
+    @classmethod
+    def validate_timezone(cls, v: str) -> str:
+        try:
+            zoneinfo.ZoneInfo(v)
+            return v
+        except (zoneinfo.ZoneInfoNotFoundError, KeyError):
+            raise ValueError(f"Invalid IANA timezone '{v}'.")
+
 
 @router.post("/purchase")
-def purchase_package(data: PurchasePackageRequest, db: Session = Depends(get_db)):
+def purchase_package(data: PurchasePackageRequest, user: Dict[str, Any] = Depends(require_student), db: Session = Depends(get_db)):
     if data.duration not in BASE_PRICES:
         raise HTTPException(status_code=400, detail="Invalid duration. Must be 30, 45, or 60.")
 
@@ -51,37 +83,21 @@ def purchase_package(data: PurchasePackageRequest, db: Session = Depends(get_db)
         total_lessons=LESSONS_PER_PACKAGE,
         remaining_lessons=LESSONS_PER_PACKAGE,
         price_paid=package_price,
-        status="pending",
+        status="active",
     )
     db.add(pkg)
     db.commit()
     db.refresh(pkg)
 
-    # Create Stripe PaymentIntent
-    try:
-        payment_intent = stripe.PaymentIntent.create(
-            amount=int(package_price * 100),
-            currency="usd",
-            payment_method_types=["card"],
-            metadata={
-                "package_id": pkg.id,
-                "student_id": data.student_id,
-                "type": "package",
-            },
-            description=f"5-Lesson Package ({data.duration}min) - Spanish with Marta",
-        )
-        return {
-            "package_id": pkg.id,
-            "client_secret": payment_intent.client_secret,
-            "price": package_price,
-        }
-    except Exception as e:
-        print(f"Stripe error: {e}")
-        raise HTTPException(status_code=500, detail="Payment initialization failed")
+    return {
+        "package_id": pkg.id,
+        "client_secret": None,
+        "price": package_price,
+    }
 
 
 @router.post("/confirm")
-def confirm_package_payment(data: dict, db: Session = Depends(get_db)):
+def confirm_package_payment(data: dict, user: Dict[str, Any] = Depends(require_student), db: Session = Depends(get_db)):
     package_id = data.get("package_id")
     if not package_id:
         raise HTTPException(status_code=400, detail="package_id required")
@@ -96,14 +112,14 @@ def confirm_package_payment(data: dict, db: Session = Depends(get_db)):
 
 
 @router.post("/book-with-package")
-def book_with_package(data: BookWithPackageRequest, db: Session = Depends(get_db)):
+def book_with_package(data: BookWithPackageRequest, user: Dict[str, Any] = Depends(require_student), db: Session = Depends(get_db)):
     pkg = db.query(StudentPackage).filter(StudentPackage.id == data.package_id).first()
     if not pkg or pkg.status != "active" or pkg.remaining_lessons <= 0:
         raise HTTPException(status_code=400, detail="No available credits in this package")
 
     # Convert to UTC and enforce 12 hour cutoff in UTC
     utc_start = data.start_time.astimezone(timezone.utc) if data.start_time.tzinfo else data.start_time.replace(tzinfo=timezone.utc)
-    if utc_start.replace(tzinfo=None) < datetime.utcnow() + timedelta(hours=12):
+    if utc_start < datetime.now(timezone.utc) + timedelta(hours=12):
         raise HTTPException(status_code=400, detail="Lessons must be booked at least 12 hours in advance.")
 
     # Get teacher for context
@@ -116,7 +132,7 @@ def book_with_package(data: BookWithPackageRequest, db: Session = Depends(get_db
         student_id=pkg.student_id,
         teacher_id=data.teacher_id,
         lesson_type=data.lesson_type,
-        start_time=utc_start.replace(tzinfo=None), # SQLite naive mapping in UTC
+        start_time=utc_start,  # timezone-aware UTC
         duration=pkg.duration,
         price=0,  # Paid via package
         status="scheduled",
@@ -140,7 +156,7 @@ def book_with_package(data: BookWithPackageRequest, db: Session = Depends(get_db
 
 
 @router.get("/student/{student_id}")
-def get_student_packages(student_id: str, db: Session = Depends(get_db)):
+def get_student_packages(student_id: str, user: Dict[str, Any] = Depends(require_student), db: Session = Depends(get_db)):
     packages = db.query(StudentPackage).filter(
         StudentPackage.student_id == student_id
     ).order_by(StudentPackage.created_at.desc()).all()

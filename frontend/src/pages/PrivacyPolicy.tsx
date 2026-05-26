@@ -2,13 +2,13 @@ import { Lock, CreditCard, ChevronRight } from 'lucide-react';
 
 const PrivacyPolicy = () => {
     return (
-        <div className="bg-[#f0f2f5] min-h-screen pt-32 pb-20 px-4 md:px-8">
-            <div className="max-w-4xl mx-auto bg-white rounded-[2.5rem] p-8 md:p-16 shadow-xl border border-gray-100">
-                <div className="flex items-center gap-4 mb-8">
-                    <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
-                        <Lock size={32} />
+        <div className="bg-[#f0f2f5] min-h-screen pt-20 sm:pt-32 pb-20 px-4 sm:px-6 md:px-8">
+            <div className="max-w-4xl mx-auto bg-white rounded-2xl sm:rounded-[2.5rem] p-6 sm:p-8 md:p-16 shadow-xl border border-gray-100">
+                <div className="flex items-center gap-3 sm:gap-4 mb-6 sm:mb-8">
+                    <div className="w-12 h-12 sm:w-16 sm:h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-600">
+                        <Lock size={28} />
                     </div>
-                    <h1 className="text-4xl font-black text-gray-900">Política de Privacidad</h1>
+                    <h1 className="text-3xl sm:text-4xl font-black text-gray-900">Política de Privacidad</h1>
                 </div>
 
                 <div className="space-y-8 text-gray-600 leading-relaxed font-medium">
@@ -36,7 +36,7 @@ const PrivacyPolicy = () => {
                         <ul className="list-disc pl-6 space-y-2">
                             <li>Datos identificativos: Nombre y Email.</li>
                             <li>Datos de gestión de clases: Horarios, nivel de español y preferencias.</li>
-                            <li>Información de pago gestionada a través de Stripe.</li>
+                            <li>Información de pago mediante transferencia bancaria o Payoneer.</li>
                             <li>Datos de inicio de sesión mediante Google OAuth si usted lo elige.</li>
                         </ul>
                     </section>
@@ -58,10 +58,10 @@ const PrivacyPolicy = () => {
                     <section className="bg-indigo-50 p-8 rounded-3xl border border-indigo-100">
                         <h2 className="text-xl font-black text-indigo-900 mb-4 flex items-center gap-2">
                             <CreditCard size={24} className="text-indigo-600" />
-                            Seguridad en los Pagos
+                            Método de Pago
                         </h2>
                         <p className="text-indigo-800">
-                            Utilizamos <strong>Stripe</strong> para procesar los pagos de forma segura. Nosotros no almacenamos los datos de su tarjeta de crédito. Stripe cumple con los más altos estándares de seguridad (PCI compliance).
+                            Los pagos se realizan mediante <strong>transferencia bancaria o Payoneer</strong> a la cuenta de la profesora. No almacenamos datos de tarjetas de crédito. Recibirá las instrucciones de pago por email tras confirmar su reserva.
                         </p>
                     </section>
 
