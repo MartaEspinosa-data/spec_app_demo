@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, LogOut, Home, BookOpen, User, Clock, DollarSign, Menu, X } from 'lucide-react';
+import { Calendar, LogOut, Home, BookOpen, User, Clock, DollarSign, Menu, X, Trash2 } from 'lucide-react';
 import LanguageSelector from '../components/LanguageSelector';
 import { useToast } from '../components/Toast';
 import { TeacherAvailabilityGrid } from '../components/calendar/TeacherAvailabilityGrid';
@@ -20,6 +20,7 @@ interface LessonInfo {
     feedback_vocabulary?: string;
     feedback_errors?: string;
     feedback_materials?: string;
+    student_payment_account?: string;
 }
 
 const TeacherDashboard = () => {
@@ -40,6 +41,10 @@ const TeacherDashboard = () => {
     // Rejection confirmation dialog
     const [rejectingLesson, setRejectingLesson] = useState<LessonInfo | null>(null);
     const [rejecting, setRejecting] = useState(false);
+
+    // Clear all lessons confirmation
+    const [showClearAll, setShowClearAll] = useState(false);
+    const [clearing, setClearing] = useState(false);
 
     useEffect(() => {
         const teacherAuth = localStorage.getItem('teacher_auth');
@@ -69,7 +74,9 @@ const TeacherDashboard = () => {
         setLoadingLessons(true);
         try {
             const res = await apiClient.get(`/lessons/teacher/${TEACHER_ID}`);
-            setLessons(res.data.lessons);
+            // Filter out completed lessons — they disappear once marked complete
+            const activeLessons = res.data.lessons.filter((l: LessonInfo) => l.status !== 'completed');
+            setLessons(activeLessons);
         } catch (err: any) {
             addToast('error', err?.response?.data?.detail || 'Failed to load lessons.');
         } finally {
@@ -79,7 +86,7 @@ const TeacherDashboard = () => {
 
     const handleLogout = () => {
         localStorage.removeItem('teacher_auth');
-        navigate('/teacher/login');
+        navigate('/');
     };
 
     const handleEditFeedback = (lesson: LessonInfo) => {
@@ -124,7 +131,12 @@ const TeacherDashboard = () => {
             await apiClient.patch(`/lessons/${lessonId}/feedback`, {}, {
                 params: { status: newStatus }
             });
-            fetchLessons();
+            // If marked complete, remove from the list instantly
+            if (newStatus === 'completed') {
+                setLessons(prev => prev.filter(l => l.id !== lessonId));
+            } else {
+                fetchLessons();
+            }
             addToast('success', `Lesson status updated to ${newStatus}.`);
         } catch (err: any) {
             addToast('error', err?.response?.data?.detail || 'Failed to update lesson status.');
@@ -145,6 +157,25 @@ const TeacherDashboard = () => {
         } finally {
             setRejecting(false);
             setRejectingLesson(null);
+        }
+    };
+
+    const handleClearAll = () => {
+        setShowClearAll(true);
+    };
+
+    const confirmClearAll = async () => {
+        setClearing(true);
+        try {
+            const res = await apiClient.delete(`/lessons/teacher/${TEACHER_ID}`);
+            const deletedCount = res.data.deleted_count;
+            setLessons([]);
+            addToast('success', `${deletedCount} lesson(s) have been permanently deleted.`);
+        } catch (err: any) {
+            addToast('error', err?.response?.data?.detail || 'Failed to clear lessons.');
+        } finally {
+            setClearing(false);
+            setShowClearAll(false);
         }
     };
 
@@ -282,9 +313,18 @@ const TeacherDashboard = () => {
                         ) : (
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between mb-6">
-                                    <p className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-wider">
-                                        {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} total
-                                    </p>
+                                    <div className="flex items-center gap-4">
+                                        <p className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-wider">
+                                            {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} total
+                                        </p>
+                                        <button
+                                            onClick={handleClearAll}
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-red-100 hover:text-red-600 transition-all"
+                                        >
+                                            <Trash2 size={13} />
+                                            Clear All Lessons
+                                        </button>
+                                    </div>
                                     <p className="text-xs text-gray-400">Times shown in Europe/Madrid</p>
                                 </div>
                                 {lessons.map((lesson) => (
@@ -338,6 +378,14 @@ const TeacherDashboard = () => {
                                                 <span className="font-bold text-gray-700">${lesson.price.toFixed(2)}</span>
                                             </div>
                                         </div>
+
+                                        {/* Student Payment Account Info */}
+                                        {lesson.student_payment_account && (
+                                            <div className="mt-3 bg-amber-50 rounded-xl p-3 border border-amber-100">
+                                                <p className="text-xs font-bold text-amber-700 uppercase tracking-wider mb-1">💳 Student's Payment Account:</p>
+                                                <p className="text-sm font-mono text-gray-700 font-bold">{lesson.student_payment_account}</p>
+                                            </div>
+                                        )}
 
                                         {/* Feedback Section */}
                                         <div className="mt-4 sm:mt-6 pt-4 sm:pt-6 border-t border-gray-50">
@@ -504,6 +552,47 @@ const TeacherDashboard = () => {
                                         className="flex-1 py-3 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition shadow-xl shadow-red-100 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 text-sm"
                                     >
                                         {rejecting ? 'Rejecting...' : 'Reject & Refund'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Clear All Lessons Confirmation Modal */}
+                {showClearAll && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                        <div className="bg-white rounded-2xl sm:rounded-[2.5rem] w-full max-w-md shadow-2xl overflow-hidden animate-in fade-in zoom-in duration-300">
+                            <div className="p-6 sm:p-8">
+                                <div className="text-center">
+                                    <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                                        <Trash2 className="w-8 h-8 text-red-600" />
+                                    </div>
+                                    <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-2">Clear All Lessons?</h2>
+                                    <p className="text-sm text-gray-500 font-medium mb-2">
+                                        This will{' '}
+                                        <strong className="text-red-600">permanently delete</strong>{' '}
+                                        all <strong className="text-gray-700">{lessons.length} lesson{lessons.length !== 1 ? 's' : ''}</strong> from the system.
+                                    </p>
+                                    <p className="text-xs text-gray-400 font-medium mb-6">
+                                        This action cannot be undone.
+                                    </p>
+                                </div>
+
+                                <div className="flex gap-3 sm:gap-4">
+                                    <button
+                                        onClick={() => setShowClearAll(false)}
+                                        disabled={clearing}
+                                        className="flex-1 py-3 bg-gray-50 text-gray-500 font-black rounded-2xl hover:bg-gray-100 transition shadow-sm active:scale-95 disabled:opacity-50 text-sm"
+                                    >
+                                        Cancel
+                                    </button>
+                                    <button
+                                        onClick={confirmClearAll}
+                                        disabled={clearing}
+                                        className="flex-1 py-3 bg-red-600 text-white font-black rounded-2xl hover:bg-red-700 transition shadow-xl shadow-red-100 flex items-center justify-center gap-2 active:scale-95 disabled:opacity-50 text-sm"
+                                    >
+                                        {clearing ? 'Deleting...' : 'Delete All'}
                                     </button>
                                 </div>
                             </div>

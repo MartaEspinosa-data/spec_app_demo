@@ -97,9 +97,19 @@ def send_lesson_confirmation(student_email: str, student_name: str, lesson_date:
     return _send_email(student_email, subject, html_body)
 
 
-def send_teacher_notification(student_name: str, lesson_date: str, duration: int, lesson_type: str):
-    """Notify Marta about a new booking."""
+def send_teacher_notification(student_name: str, lesson_date: str, duration: int, lesson_type: str, student_payment_account: str = ""):
+    """Notify Marta about a new booking, including student payment details."""
     subject = f"🔔 New Booking: {student_name} ({lesson_date})"
+
+    payment_info_block = ""
+    if student_payment_account:
+        payment_info_block = f"""
+        <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 20px 0;">
+            <p style="font-weight: bold; color: #92400e; margin: 0 0 8px 0;">💳 Student Payment Account:</p>
+            <p style="font-size: 18px; font-weight: bold; color: #1f2937; margin: 0; font-family: monospace;">{student_payment_account}</p>
+            <p style="font-size: 12px; color: #a16207; margin: 8px 0 0 0;">The student stated they transferred the payment from this account.</p>
+        </div>
+        """
 
     html_body = f"""
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
@@ -110,7 +120,8 @@ def send_teacher_notification(student_name: str, lesson_date: str, duration: int
             <p><strong>Duration:</strong> {duration} mins</p>
             <p><strong>Type:</strong> {lesson_type}</p>
         </div>
-        <p>Check your <a href="http://localhost:5174/teacher/dashboard">Teacher Dashboard</a> for more details.</p>
+        {payment_info_block}
+        <p>Verify the payment and then accept or reject the lesson on your <a href="http://localhost:5174/teacher/dashboard">Teacher Dashboard</a>.</p>
     </div>
     """
 

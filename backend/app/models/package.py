@@ -18,3 +18,9 @@ class StudentPackage(Base):
     price_paid = Column(Float, nullable=False)
     status = Column(String, default="active")  # active, exhausted, cancelled
     created_at = Column(DateTime(timezone=True), server_default=func.now())
+    
+    # Stripe Payment Link tracking
+    stripe_payment_link_id = Column(String, nullable=True)  # Stripe PaymentLink ID (pl_xxx)
+    stripe_payment_link_url = Column(String, nullable=True)  # Full URL for the Stripe-hosted payment page
+    stripe_session_id = Column(String, nullable=True)  # Stripe Checkout Session ID (cs_xxx)
+    payment_method = Column(String, nullable=True, default="manual")  # 'stripe' or 'manual'

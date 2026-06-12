@@ -11,4 +11,7 @@ apscheduler>=3.11.0
 bcrypt>=4.2.0
 python-jose[cryptography]>=3.3.0
 
+# Payments
+stripe>=13.0.0
+
 # Database (for SQLite, included; for Postgres, add psycopg2-binary)

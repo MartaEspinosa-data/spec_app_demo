@@ -25,6 +25,15 @@ class Lesson(Base):
     feedback_errors = Column(String, nullable=True)
     feedback_materials = Column(String, nullable=True)
     
+    # Payment tracking (Stripe handles all payments)
+    student_payment_account = Column(String, nullable=True)
+    
+    # Stripe Payment Link tracking
+    stripe_payment_link_id = Column(String, nullable=True)  # Stripe PaymentLink ID (pl_xxx)
+    stripe_payment_link_url = Column(String, nullable=True)  # Full URL for the Stripe-hosted payment page
+    stripe_session_id = Column(String, nullable=True)  # Stripe Checkout Session ID (cs_xxx)
+    payment_method = Column(String, nullable=True, default="stripe")  # 'stripe' or 'manual'
+    
     # Notifications tracking
     reminder_60m_sent = Column(Integer, default=0) # Using 0/1 for SQLite simplicity
     reminder_30m_sent = Column(Integer, default=0)

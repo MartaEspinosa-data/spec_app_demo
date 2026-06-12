@@ -24,7 +24,7 @@ def seed():
         ¡Nos vemos en clase!""",
         languages=["Spanish", "English", "French"],
         price_per_hour=35.0,
-        video_url="https://youtube.com/v/example_video_id",
+        video_url="https://youtu.be/gfoATSeL8pU",
         calendly_url="https://calendly.com/mateo-hola-lingo/60min"
     )
 

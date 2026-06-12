@@ -175,9 +175,11 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
         }
 
     # Generate a secure reset token valid for 1 hour
+    # NOTE: Store naive UTC datetime because SQLite strips timezone info.
+    # Use .replace(tzinfo=None) so the comparison in reset_password works.
     reset_token = secrets.token_urlsafe(32)
     student.reset_token = reset_token
-    student.reset_token_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
+    student.reset_token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
     db.commit()
 
     reset_url = f"{FRONTEND_URL}/student/reset-password?token={reset_token}"
@@ -201,7 +203,9 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
 
-    if student.reset_token_expiry is None or student.reset_token_expiry < datetime.now(timezone.utc):
+    # Compare with naive UTC since SQLite strips timezone info on storage.
+    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    if student.reset_token_expiry is None or student.reset_token_expiry < now_utc_naive:
         # Clean up expired token
         student.reset_token = None
         student.reset_token_expiry = None

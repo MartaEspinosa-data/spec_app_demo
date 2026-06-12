@@ -1,4 +1,4 @@
-{
+﻿{
     "nav.brand": "Spanish with Marta",
     "nav.getStarted": "Book a Lesson",
     "nav.teacherDashboard": "Teacher Dashboard",
@@ -19,8 +19,8 @@
     "landing.packages.45min.desc": "5 lessons x 45 minutes — ideal balance of depth and convenience. Save 3%!",
     "landing.packages.60min.title": "60 Min Class",
     "landing.packages.60min.desc": "5 lessons x 60 minutes — the full immersive experience. Save 3%!",
-    "landing.single.title": "Single Lessons",
-    "landing.single.subtitle": "Just one lesson — no packages, no discounts, full flexibility.",
+    "landing.single.title": "Book a Lesson",
+    "landing.single.subtitle": "Book a single lesson — no packages, no commitments, full flexibility.",
     "landing.single.30min.title": "30 Min Single",
     "landing.single.30min.desc": "One 30-minute session — perfect to try it out or practice a quick conversation.",
     "landing.single.45min.title": "45 Min Single",
@@ -63,7 +63,7 @@
     "booking.processing": "Processing...",
     "booking.confirmPayment": "Confirm Booking",
     "booking.selectSlot": "Select a Slot",
-    "booking.manualPaymentNote": "Manual payment — you will receive payment instructions",
+    "booking.manualPaymentNote": "Secure payment via Stripe 💳",
     "booking.cancel": "Cancel",
     "booking.duration": "Lesson Duration",
     "booking.duration.30": "30 Minutes",

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Sparkles, Calendar, Zap, MessageCircleQuestion, CheckCircle2, Play, Info, Menu, X } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -8,7 +8,6 @@ import { useToast } from '../components/Toast';
 import LanguageSelector from '../components/LanguageSelector';
 import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
 import { DurationSelector } from '../components/calendar/DurationSelector';
-import { EmbeddedCheckout } from '../components/ManualPaymentForm';
 import { ReviewsCarousel } from '../components/ReviewsCarousel';
 
 const LandingPage = () => {
@@ -20,9 +19,9 @@ const LandingPage = () => {
     const [selectedDuration, setSelectedDuration] = useState<number>(60);
     const [submitting, setSubmitting] = useState(false);
     const [currency, setCurrency] = useState<'USD' | 'EUR' | 'GBP' | 'CZK'>('USD');
-    const [checkoutData, setCheckoutData] = useState<{clientSecret: string | null; lessonId: string; price: number; studentData?: any} | null>(null);
-    const [checkoutType, setCheckoutType] = useState<'lesson' | 'package'>('lesson');
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [dynamicPrice, setDynamicPrice] = useState<number | null>(null);
+    const [priceLoading, setPriceLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -30,6 +29,30 @@ const LandingPage = () => {
     });
 
     const studentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
+
+    // Fetch dynamic price when lesson_type or duration changes
+    useEffect(() => {
+        let cancelled = false;
+        const fetchPrice = async () => {
+            setPriceLoading(true);
+            try {
+                const res = await axios.get(`${API_URL}/lessons/price`, {
+                    params: {
+                        lesson_type: formData.subject,
+                        duration: selectedDuration,
+                        teacher_id: TEACHER_ID,
+                    },
+                });
+                if (!cancelled) setDynamicPrice(res.data.price);
+            } catch {
+                if (!cancelled) setDynamicPrice(null);
+            } finally {
+                if (!cancelled) setPriceLoading(false);
+            }
+        };
+        fetchPrice();
+        return () => { cancelled = true; };
+    }, [formData.subject, selectedDuration]);
 
     const handleBooking = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -46,49 +69,19 @@ const LandingPage = () => {
                 duration: selectedDuration,
                 student_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
             });
-            
-            setCheckoutType('lesson');
-            setCheckoutData({
-                clientSecret: response.data.client_secret,
-                lessonId: response.data.lesson_id,
-                price: response.data.price,
-                studentData: {
-                    student_id: response.data.student_id,
-                    name: response.data.student_name,
-                    email: response.data.student_email
-                }
-            });
+
+            const stripeUrl = response.data.stripe_payment_link_url as string | null;
+
+            // Redirect to Stripe's hosted payment page
+            if (stripeUrl) {
+                window.location.href = stripeUrl;
+                return;
+            }
+
+            // Stripe must be configured
+            addToast('error', 'Payment system is not available. Please try again later.');
         } catch (err: any) {
             const msg = err?.response?.data?.detail || err?.message || 'Error creating booking. Please try again.';
-            addToast('error', msg);
-        } finally {
-            setSubmitting(false);
-        }
-    };
-
-    const handlePackagePurchase = async (duration: number) => {
-        if (submitting) return;
-        if (!studentAuth) {
-            alert('Please login as a student to purchase packages.');
-            navigate('/student/login');
-            return;
-        }
-
-        setSubmitting(true);
-        try {
-            const response = await axios.post(`${API_URL}/packages/purchase`, {
-                student_id: studentAuth.student_id,
-                duration: duration
-            });
-
-            setCheckoutType('package');
-            setCheckoutData({
-                clientSecret: response.data.client_secret,
-                lessonId: response.data.package_id,
-                price: response.data.price,
-            });
-        } catch (err: any) {
-            const msg = err?.response?.data?.detail || err?.message || 'Error initializing package purchase.';
             addToast('error', msg);
         } finally {
             setSubmitting(false);
@@ -102,8 +95,6 @@ const LandingPage = () => {
     const handleSingleLessonClick = (duration: number) => {
         setSelectedDuration(duration);
         setSelectedSlot(null);
-        setCheckoutData(null);
-        setCheckoutType('lesson');
         scrollToBooking();
     };
 
@@ -117,49 +108,6 @@ const LandingPage = () => {
     const formatPrice = (eurPrice: number) => {
         return (eurPrice * rate).toFixed(2);
     };
-
-    const formatPkg = (minutes: 30 | 45 | 60) => {
-        const base = basePricesEUR[minutes];
-        const discounted = base * 0.97;
-        const perLesson = formatPrice(discounted);
-        const total = formatPrice(discounted * 5);
-        const wasPer = formatPrice(base);
-        const wasTotal = formatPrice(base * 5);
-        return { perLesson, total, wasPer, wasTotal };
-    };
-
-    const p30 = formatPkg(30), p45 = formatPkg(45), p60 = formatPkg(60);
-
-    const packages = [
-        {
-            title: t('landing.packages.30min.title'),
-            desc: t('landing.packages.30min.desc'),
-            total: `${sym}${p30.total}`,
-            perLesson: `${sym}${p30.perLesson}`,
-            wasTotal: `${sym}${p30.wasTotal}`,
-            icon: <Zap size={24} className="text-yellow-500" />,
-            duration: 30 as const,
-        },
-        {
-            title: t('landing.packages.45min.title'),
-            desc: t('landing.packages.45min.desc'),
-            total: `${sym}${p45.total}`,
-            perLesson: `${sym}${p45.perLesson}`,
-            wasTotal: `${sym}${p45.wasTotal}`,
-            icon: <Sparkles size={24} className="text-indigo-500" />,
-            popular: true,
-            duration: 45 as const,
-        },
-        {
-            title: t('landing.packages.60min.title'),
-            desc: t('landing.packages.60min.desc'),
-            total: `${sym}${p60.total}`,
-            perLesson: `${sym}${p60.perLesson}`,
-            wasTotal: `${sym}${p60.wasTotal}`,
-            icon: <CheckCircle2 size={24} className="text-indigo-500" />,
-            duration: 60 as const,
-        }
-    ];
 
     const singleLessons = [
         {
@@ -184,8 +132,6 @@ const LandingPage = () => {
             duration: 60 as const,
         }
     ];
-
-    const packageDurations = [30, 45, 60] as const;
 
     const closeMobileMenu = () => setMobileMenuOpen(false);
 
@@ -325,7 +271,7 @@ const LandingPage = () => {
                         ) : (
                             <iframe
                                 className="w-full h-full"
-                                src="https://www.youtube.com/embed/kz7xjaNxqr8?autoplay=1"
+                                src="https://www.youtube.com/embed/gfoATSeL8pU?autoplay=1"
                                 title="Spanish con Marta Presentation"
                                 frameBorder="0"
                                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
@@ -335,7 +281,7 @@ const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* Single Lesson Section */}
+                {/* Book a Lesson Section */}
                 <section className="max-w-6xl mx-auto mb-20 sm:mb-32">
                     <div className="text-center mb-10 sm:mb-16">
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.single.title')}</h2>
@@ -386,62 +332,6 @@ const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* Packages Section */}
-                <section className="max-w-6xl mx-auto mb-20 sm:mb-32">
-                    <div className="text-center mb-10 sm:mb-16">
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.packages.title')}</h2>
-                        <div className="w-20 sm:w-24 h-1.5 bg-indigo-600 mx-auto rounded-full mb-6 sm:mb-8"></div>
-                        <div className="flex justify-center gap-2 mt-4 flex-wrap px-2">
-                            {(['USD', 'EUR', 'GBP', 'CZK'] as const).map((c) => (
-                                <button
-                                    key={c}
-                                    onClick={() => setCurrency(c)}
-                                    className={`px-3 sm:px-5 py-2 sm:py-2.5 rounded-full font-bold text-xs sm:text-sm transition-all ${
-                                        currency === c
-                                            ? 'bg-indigo-600 text-white shadow-lg'
-                                            : 'bg-white text-gray-600 border border-gray-200 hover:border-indigo-300'
-                                    }`}
-                                >
-                                    {c === 'USD' ? '$ USD' : c === 'EUR' ? '€ EUR' : c === 'GBP' ? '£ GBP' : 'Kč CZK'}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
-                        {packages.map((pkg, i) => (
-                            <div key={i} className={`bg-white p-6 sm:p-10 rounded-2xl sm:rounded-3xl border transition-all duration-300 flex flex-col h-full ${pkg.popular ? 'border-indigo-500 shadow-2xl md:scale-105 relative' : 'border-gray-100 shadow-lg hover:border-indigo-200'}`}>
-                                {pkg.popular && (
-                                    <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-indigo-600 text-white font-bold px-4 sm:px-6 py-1.5 sm:py-2 rounded-full text-xs sm:text-sm shadow-md">
-                                        Most Popular
-                                    </div>
-                                )}
-                                <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                                    <div className={`w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner ${pkg.popular ? 'bg-indigo-50' : 'bg-gray-50'}`}>
-                                        {pkg.icon}
-                                    </div>
-                                    <h3 className="text-lg sm:text-2xl font-black text-gray-800">{pkg.title}</h3>
-                                </div>
-                                <p className="text-sm sm:text-base text-gray-600 font-medium leading-relaxed mb-6 sm:mb-8 flex-grow">{pkg.desc}</p>
-                                <div className="mt-auto">
-                                    <div className="text-lg sm:text-2xl font-black text-indigo-600 bg-indigo-50 p-4 sm:p-5 rounded-xl border border-indigo-100 text-center">
-                                        {pkg.total}
-                                    </div>
-                                    <div className="text-center mt-2 text-xs sm:text-sm text-gray-400 font-medium">
-                                        5 x {pkg.perLesson} — <span className="line-through">{pkg.wasTotal}</span>
-                                    </div>
-                                    <button
-                                        onClick={() => handlePackagePurchase(packageDurations[i])}
-                                        className={`w-full py-3 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm sm:text-base ${pkg.popular ? 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30' : 'bg-white text-indigo-600 border-2 border-indigo-100 hover:border-indigo-600'}`}
-                                    >
-                                        <Zap size={18} />
-                                        Buy 5 Classes
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </section>
-
                 {/* Booking Section */}
                 <section id="book" className="max-w-7xl mx-auto mb-20 sm:mb-32">
                     <div className="text-center mb-10 sm:mb-16">
@@ -472,36 +362,12 @@ const LandingPage = () => {
                         {/* Right: Booking Form / Payment */}
                         <div className="lg:col-span-4 lg:sticky lg:top-32">
                             <div className="bg-white p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border border-gray-100 relative overflow-hidden">
-                                {checkoutData ? (
-                                    <div className="relative z-10">
-                                        <h2 className="text-xl sm:text-2xl font-black text-gray-900 mb-4 sm:mb-6 flex items-center gap-3">
-                                            💳 {t('booking.confirmPayment')}
-                                        </h2>
-                                        <EmbeddedCheckout
-                                            type={checkoutType}
-                                            clientSecret={checkoutData.clientSecret}
-                                            lessonId={checkoutData.lessonId}
-                                            price={checkoutData.price}
-                                            duration={selectedDuration}
-                                            onCancel={() => {
-                                                setCheckoutData(null);
-                                                setSelectedSlot(null);
-                                            }}
-                                            onPaymentSuccess={() => {
-                                                if (checkoutData.studentData && !studentAuth) {
-                                                    localStorage.setItem('student_auth', JSON.stringify(checkoutData.studentData));
-                                                }
-                                            }}
-                                        />
-                                    </div>
-                                ) : (
-                                    <>
-                                        <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-6 sm:mb-8 relative z-10 flex items-center gap-3">
-                                            <Info size={24} className="text-indigo-600" />
-                                            {t('booking.confirmTitle')}
-                                        </h2>
+                                <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-6 sm:mb-8 relative z-10 flex items-center gap-3">
+                                    <Info size={24} className="text-indigo-600" />
+                                    {t('booking.confirmTitle')}
+                                </h2>
 
-                                        <form onSubmit={handleBooking} className="flex flex-col gap-4 sm:gap-6 relative z-10">
+                                <form onSubmit={handleBooking} className="flex flex-col gap-4 sm:gap-6 relative z-10">
                                             <div className="space-y-2">
                                                 <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.name')}</label>
                                                 <input
@@ -531,9 +397,26 @@ const LandingPage = () => {
                                                     value={formData.subject}
                                                     onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
                                                 >
-                                                    <option>{t('booking.subjects.conversation')}</option>
-                                                    <option>{t('booking.subjects.basic_course')}</option>
+                                                    <option value="Conversación">🗣️ {t('booking.subjects.conversation')}</option>
+                                                    <option value="Curso Básico">📚 {t('booking.subjects.basic_course')}</option>
+                                                    <option value="Grammar">📝 Grammar</option>
+                                                    <option value="Examen DELE">🎓 Examen DELE</option>
+                                                    <option value="Entrevista de Trabajo">💼 Entrevista de Trabajo</option>
                                                 </select>
+                                            </div>
+
+                                            {/* Dynamic price display */}
+                                            <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 text-center">
+                                                {priceLoading ? (
+                                                    <span className="text-indigo-400 font-bold text-sm animate-pulse">Calculating price...</span>
+                                                ) : dynamicPrice !== null ? (
+                                                    <div>
+                                                        <span className="text-2xl sm:text-3xl font-black text-indigo-600">{sym}{(dynamicPrice * rate).toFixed(2)}</span>
+                                                        <p className="text-xs text-indigo-400 font-medium mt-1">{selectedDuration} min · {formData.subject}</p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="text-indigo-400 font-bold text-sm">—</span>
+                                                )}
                                             </div>
 
                                             <div className="pt-2 sm:pt-4">
@@ -545,15 +428,17 @@ const LandingPage = () => {
                                                         : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
                                                         }`}
                                                 >
-                                                    {submitting ? t('booking.processing') : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot'))}
+                                                    {submitting ? t('booking.processing') : (
+                                                        selectedSlot && dynamicPrice !== null
+                                                            ? `Pay ${sym}${(dynamicPrice * rate).toFixed(2)} · Confirm Booking`
+                                                            : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot'))
+                                                    )}
                                                 </button>
                                             </div>
                                             <p className="text-center text-xs font-bold text-gray-400 mt-1 sm:mt-2">
                                                 {t('booking.manualPaymentNote')}
                                             </p>
                                         </form>
-                                    </>
-                                )}
 
                                 <div className="absolute -bottom-20 -right-20 w-48 sm:w-64 h-48 sm:h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0"></div>
                             </div>

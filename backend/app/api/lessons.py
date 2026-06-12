@@ -18,6 +18,52 @@ from app.models.availability import TeacherAvailability
 
 MADRID_TZ = zoneinfo.ZoneInfo("Europe/Madrid")
 
+# ── Lesson-type-specific pricing (EUR) ──────────────────────────────────────
+# Each lesson type maps to per-duration prices.
+# If a lesson_type or duration is not found here, the teacher's pricing_schema
+# or hourly rate is used as fallback.
+LESSON_TYPE_PRICING: Dict[str, Dict[int, float]] = {
+    # Core types (most common)
+    "Conversación":    {30: 16.34, 45: 23.56, 60: 30.95},
+    "Conversacion":    {30: 16.34, 45: 23.56, 60: 30.95},
+    "Conversation":    {30: 16.34, 45: 23.56, 60: 30.95},
+    "Grammar":         {30: 16.34, 45: 23.56, 60: 30.95},
+    "Gramática":       {30: 16.34, 45: 23.56, 60: 30.95},
+
+    # Structured courses — higher price (curriculum preparation)
+    "Curso Básico":    {30: 18.00, 45: 25.50, 60: 33.00},
+    "Curso Basico":    {30: 18.00, 45: 25.50, 60: 33.00},
+    "Basic Course":    {30: 18.00, 45: 25.50, 60: 33.00},
+
+    # Premium / specialized types
+    "Examen DELE":           {30: 20.00, 45: 28.00, 60: 36.00},
+    "Entrevista de Trabajo": {30: 20.00, 45: 28.00, 60: 36.00},
+}
+
+def get_lesson_price(
+    lesson_type: str,
+    duration: int,
+    teacher_pricing_schema: Optional[Dict[str, Any]] = None,
+    teacher_hourly_rate: float = 30.95,
+) -> float:
+    """
+    Determine the price for a lesson by checking, in order:
+    1. LESSON_TYPE_PRICING[lesson_type][duration]
+    2. teacher.pricing_schema[duration]
+    3. teacher.price_per_hour * (duration / 60)
+    """
+    # 1. Lesson-type-specific pricing
+    type_prices = LESSON_TYPE_PRICING.get(lesson_type)
+    if type_prices and duration in type_prices:
+        return float(type_prices[duration])
+
+    # 2. Teacher's custom pricing schema
+    if teacher_pricing_schema and str(duration) in teacher_pricing_schema:
+        return float(teacher_pricing_schema[str(duration)])
+
+    # 3. Fallback to proportional hourly rate
+    return teacher_hourly_rate * (duration / 60.0)
+
 def get_slots_for_day(db: Session, teacher_id: str, target_date: date_type, duration: int = 60):
     # Fetch availability rules
     # We prioritize specific_date over day_of_week
@@ -116,9 +162,13 @@ def get_teacher_lessons(teacher_id: str, user: Dict[str, Any] = Depends(require_
             "duration": l.duration,
             "price": l.price,
             "status": l.status,
+            "payment_method": l.payment_method or "manual",
+            "stripe_payment_link_url": l.stripe_payment_link_url or "",
+            "stripe_session_id": l.stripe_session_id or "",
             "feedback_vocabulary": l.feedback_vocabulary,
             "feedback_errors": l.feedback_errors,
             "feedback_materials": l.feedback_materials,
+            "student_payment_account": l.student_payment_account or "",
         })
     return {"lessons": result}
 
@@ -138,8 +188,10 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         models.Lesson.start_time < utc_end,
     ).all()
     for existing in existing_lessons:
-        existing_end = existing.start_time + timedelta(minutes=existing.duration)
-        if utc_start < existing_end and utc_end > existing.start_time:
+        # Ensure DB datetime is treated as timezone-aware UTC
+        existing_start = existing.start_time if existing.start_time.tzinfo else existing.start_time.replace(tzinfo=timezone.utc)
+        existing_end = existing_start + timedelta(minutes=existing.duration)
+        if utc_start < existing_end and utc_end > existing_start:
             raise HTTPException(status_code=409, detail="This time slot is no longer available. Please choose another time.")
 
     # 1. Ensure/Create Student
@@ -156,11 +208,18 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         raise HTTPException(status_code=404, detail="Teacher not found")
     
     # 3. Create Lesson record (stored as timezone-aware UTC datetime)
-    # Use duration-specific pricing from teacher's pricing_schema, fall back to proportional
-    if teacher.pricing_schema and str(lesson.duration) in teacher.pricing_schema:
-        price = float(teacher.pricing_schema[str(lesson.duration)])
-    else:
-        price = teacher.price_per_hour * (lesson.duration / 60.0)
+    # Use lesson-type + duration-specific pricing from centralized LESSON_TYPE_PRICING,
+    # falling back to teacher's pricing_schema or hourly rate.
+    price = get_lesson_price(
+        lesson_type=lesson.lesson_type,
+        duration=lesson.duration,
+        teacher_pricing_schema=teacher.pricing_schema,
+        teacher_hourly_rate=teacher.price_per_hour,
+    )
+
+    lesson_date_str = utc_start.strftime("%A, %B %d at %I:%M %p UTC") if utc_start else "TBD"
+
+    # 4. Create the lesson record first (so we have an ID for Stripe metadata)
     db_lesson = models.Lesson(
         student_id=db_student.id,
         teacher_id=lesson.teacher_id,
@@ -169,14 +228,44 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         duration=lesson.duration,
         price=price,
         student_timezone=lesson.student_timezone or "UTC",
+        payment_method="stripe",
     )
     db.add(db_lesson)
     db.commit()
     db.refresh(db_lesson)
 
-    # 4. Send confirmation email to student immediately upon booking
+    # 5. Create a Stripe Checkout Session with the real lesson_id in metadata
+    from app.utils.stripe import create_checkout_session, is_stripe_configured
+    stripe_session_id: Optional[str] = None
+    stripe_checkout_url: Optional[str] = None
+    payment_method = "stripe" if is_stripe_configured() else "manual"
+
+    if is_stripe_configured():
+        slot_iso = utc_start.strftime("%Y-%m-%dT%H:%M:%SZ") if utc_start else ""
+        stripe_session_id, stripe_checkout_url = create_checkout_session(
+            lesson_id=db_lesson.id,
+            duration=lesson.duration,
+            student_name=db_student.name,
+            student_email=db_student.email,
+            slot_iso=slot_iso,
+        )
+        if stripe_session_id:
+            db_lesson.stripe_session_id = stripe_session_id
+        if stripe_checkout_url:
+            db_lesson.stripe_payment_link_url = stripe_checkout_url
+        if stripe_session_id or stripe_checkout_url:
+            db_lesson.payment_method = "stripe"
+        else:
+            db_lesson.payment_method = "manual"
+        db.commit()
+        db.refresh(db_lesson)
+    else:
+        db_lesson.payment_method = "manual"
+        db.commit()
+        db.refresh(db_lesson)
+
+    # 6. Send confirmation email to student immediately upon booking
     from app.utils.email import send_lesson_confirmation
-    lesson_date_str = db_lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if db_lesson.start_time else "TBD"
     send_lesson_confirmation(
         student_email=db_student.email,
         student_name=db_student.name,
@@ -185,7 +274,7 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         lesson_type=db_lesson.lesson_type
     )
 
-    # 5. Return Manual Payment Booking Response
+    # 7. Return response — includes the Stripe Checkout URL if configured
     return {
         "lesson_id": db_lesson.id,
         "client_secret": None,
@@ -193,45 +282,48 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         "student_id": db_student.id,
         "student_name": db_student.name,
         "student_email": db_student.email,
+        "stripe_payment_link_url": stripe_checkout_url,
+        "payment_method": payment_method,
     }
 
 
-@router.post("/confirm-payment")
-def confirm_payment(data: dict, db: Session = Depends(database.get_db)):
-    """Called by the frontend after manual payment completes to notify teacher."""
-    lesson_id = data.get("lesson_id")
-    if not lesson_id:
-        raise HTTPException(status_code=400, detail="lesson_id is required")
-    
-    db_lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
-    if not db_lesson:
-        raise HTTPException(status_code=404, detail="Lesson not found")
-    
-    # Keep status as pending until teacher manually approves
-    db_lesson.status = "pending"
-    db.commit()
-    
-    # Send manual booking notifications
-    from app.utils.email import send_lesson_confirmation, send_teacher_notification
-    student = db.query(student_models.Student).filter(student_models.Student.id == db_lesson.student_id).first()
-    if student:
-        lesson_date_str = db_lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if db_lesson.start_time else "TBD"
-        send_lesson_confirmation(
-            student_email=student.email,
-            student_name=student.name,
-            lesson_date=lesson_date_str,
-            duration=db_lesson.duration,
-            lesson_type=db_lesson.lesson_type
-        )
-        # Notify Teacher
-        send_teacher_notification(
-            student_name=student.name,
-            lesson_date=lesson_date_str,
-            duration=db_lesson.duration,
-            lesson_type=db_lesson.lesson_type
-        )
-    
-    return {"status": "pending_approval", "lesson_id": lesson_id}
+@router.get("/price")
+def lookup_lesson_price(
+    lesson_type: str,
+    duration: int = 60,
+    teacher_id: Optional[str] = None,
+    db: Session = Depends(database.get_db),
+):
+    """
+    Return the total price for a given lesson_type + duration combination.
+    Optionally accepts a teacher_id to fall back to teacher-specific pricing.
+    Does NOT require authentication — the frontend needs this before booking.
+    """
+    if duration not in schemas.VALID_DURATIONS:
+        raise HTTPException(status_code=400, detail=f"Invalid duration {duration}. Must be one of: {sorted(schemas.VALID_DURATIONS)}")
+
+    # Gather teacher fallback data if a teacher_id was provided
+    teacher_pricing_schema = None
+    teacher_hourly_rate = 30.95
+    if teacher_id:
+        teacher = db.query(teacher_models.Teacher).filter(teacher_models.Teacher.id == teacher_id).first()
+        if teacher:
+            teacher_pricing_schema = teacher.pricing_schema
+            teacher_hourly_rate = teacher.price_per_hour
+
+    price = get_lesson_price(
+        lesson_type=lesson_type,
+        duration=duration,
+        teacher_pricing_schema=teacher_pricing_schema,
+        teacher_hourly_rate=teacher_hourly_rate,
+    )
+
+    return {
+        "lesson_type": lesson_type,
+        "duration": duration,
+        "price": price,
+        "currency": "EUR",
+    }
 
 
 @router.patch("/{lesson_id}/reschedule")
@@ -302,6 +394,25 @@ def cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require_student
     }
 
 
+@router.delete("/teacher/{teacher_id}")
+def delete_all_teacher_lessons(
+    teacher_id: str,
+    user: Dict[str, Any] = Depends(require_teacher),
+    db: Session = Depends(database.get_db)
+):
+    """Teacher permanently deletes ALL their lesson records."""
+    deleted_count = db.query(models.Lesson).filter(
+        models.Lesson.teacher_id == teacher_id
+    ).delete(synchronize_session='fetch')
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"{deleted_count} lesson(s) have been permanently deleted.",
+        "deleted_count": deleted_count,
+    }
+
+
 @router.patch("/{lesson_id}/feedback")
 def update_lesson_feedback(
     lesson_id: str,
@@ -346,9 +457,9 @@ def update_lesson_feedback(
         )
         lesson_date_str = db_lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if db_lesson.start_time else "TBD"
 
-        # Teacher info
+        # Teacher info (model has no email field, use env var)
         teacher = db_lesson.teacher
-        teacher_email = teacher.email if (teacher and teacher.email) else os.getenv("TEACHER_NOTIFICATION_EMAIL", "martaespinosagarcia@gmail.com")
+        teacher_email = os.getenv("TEACHER_NOTIFICATION_EMAIL", "martaespinosagarcia@gmail.com")
         teacher_name = teacher.name if teacher else "Marta"
 
         # Student info

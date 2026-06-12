@@ -76,39 +76,53 @@ def purchase_package(data: PurchasePackageRequest, user: Dict[str, Any] = Depend
     single_price = BASE_PRICES[data.duration]
     package_price = round(single_price * LESSONS_PER_PACKAGE * (1 - PACKAGE_DISCOUNT), 2)
 
-    # Create the package record (pending until payment confirms)
+    # Create the package record first (so we have an ID for Stripe metadata)
+    from app.utils.stripe import create_package_checkout_session, is_stripe_configured
+    payment_method = "stripe" if is_stripe_configured() else "manual"
+    initial_status = "pending" if is_stripe_configured() else "active"
+
     pkg = StudentPackage(
         student_id=data.student_id,
         duration=data.duration,
         total_lessons=LESSONS_PER_PACKAGE,
         remaining_lessons=LESSONS_PER_PACKAGE,
         price_paid=package_price,
-        status="active",
+        status=initial_status,
+        payment_method=payment_method,
     )
     db.add(pkg)
     db.commit()
     db.refresh(pkg)
 
+    # Create Stripe Checkout Session if configured
+    stripe_checkout_url: Optional[str] = None
+    if is_stripe_configured():
+        stripe_session_id, stripe_checkout_url = create_package_checkout_session(
+            package_id=pkg.id,
+            duration=data.duration,
+            price_eur=package_price,
+            student_name=student.name,
+            student_email=student.email,
+            total_lessons=LESSONS_PER_PACKAGE,
+        )
+        if stripe_session_id:
+            pkg.stripe_session_id = stripe_session_id
+        if stripe_checkout_url:
+            pkg.stripe_payment_link_url = stripe_checkout_url
+        if stripe_session_id or stripe_checkout_url:
+            pkg.payment_method = "stripe"
+        else:
+            pkg.payment_method = "manual"
+        db.commit()
+        db.refresh(pkg)
+
     return {
         "package_id": pkg.id,
         "client_secret": None,
         "price": package_price,
+        "stripe_payment_link_url": stripe_checkout_url,
+        "payment_method": payment_method,
     }
-
-
-@router.post("/confirm")
-def confirm_package_payment(data: dict, user: Dict[str, Any] = Depends(require_student), db: Session = Depends(get_db)):
-    package_id = data.get("package_id")
-    if not package_id:
-        raise HTTPException(status_code=400, detail="package_id required")
-
-    pkg = db.query(StudentPackage).filter(StudentPackage.id == package_id).first()
-    if not pkg:
-        raise HTTPException(status_code=404, detail="Package not found")
-
-    pkg.status = "active"
-    db.commit()
-    return {"status": "active", "package_id": pkg.id, "remaining_lessons": pkg.remaining_lessons}
 
 
 @router.post("/book-with-package")

@@ -1,4 +1,4 @@
-{
+﻿{
     "nav.brand": "Spanish con Marta",
     "nav.getStarted": "Reserva una Lección",
     "nav.teacherDashboard": "Panel de la Profesora",
@@ -19,8 +19,8 @@
     "landing.packages.45min.desc": "5 clases x 45 minutos — equilibrio ideal entre profundidad y conveniencia. ¡Ahorra 3%!",
     "landing.packages.60min.title": "Clase de 60 Min",
     "landing.packages.60min.desc": "5 clases x 60 minutos — la experiencia inmersiva completa. ¡Ahorra 3%!",
-    "landing.single.title": "Clases Sueltas",
-    "landing.single.subtitle": "Solo una clase — sin paquetes, sin descuentos, máxima flexibilidad.",
+    "landing.single.title": "Reserva una Clase",
+    "landing.single.subtitle": "Reserva una clase individual — sin paquetes, sin compromisos, máxima flexibilidad.",
     "landing.single.30min.title": "30 Min Suelta",
     "landing.single.30min.desc": "Una sesión de 30 minutos — perfecta para probar o practicar conversación rápida.",
     "landing.single.45min.title": "45 Min Suelta",
@@ -63,7 +63,7 @@
     "booking.processing": "Procesando...",
     "booking.confirmPayment": "Confirmar Reserva",
     "booking.selectSlot": "Selecciona una Hora",
-    "booking.manualPaymentNote": "Pago manual — recibirás instrucciones de pago",
+    "booking.manualPaymentNote": "Pago seguro con Stripe 💳",
     "booking.cancel": "Cancelar",
     "booking.duration": "Duración de la Clase",
     "booking.duration.30": "30 Minutos",
