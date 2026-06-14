@@ -74,10 +74,10 @@ const TeacherDashboard = () => {
         setLoadingLessons(true);
         try {
             const res = await apiClient.get(`/lessons/teacher/${TEACHER_ID}`);
-            // Filter out completed lessons (they disappear once marked complete)
-            // AND pending lessons (unpaid — webhook auto-confirms them; teacher has no action to take)
+            // Filter out completed lessons (they disappear once marked complete).
+            // Pending lessons ARE shown — the teacher can reject/cancel them.
             const activeLessons = res.data.lessons.filter(
-                (l: LessonInfo) => l.status !== 'completed' && l.status !== 'pending'
+                (l: LessonInfo) => l.status !== 'completed'
             );
             setLessons(activeLessons);
         } catch (err: any) {
@@ -121,8 +121,9 @@ const TeacherDashboard = () => {
     };
 
     const updateStatus = async (lessonId: string, newStatus: string, lesson: LessonInfo) => {
-        // If teacher is rejecting a pending lesson (pending → cancelled), show confirmation dialog
-        if (lesson.status === 'pending' && newStatus === 'cancelled') {
+        // If teacher is cancelling any non-completed lesson, show confirmation dialog
+        // (covers both pending→cancelled and scheduled→cancelled)
+        if (newStatus === 'cancelled') {
             setRejectingLesson(lesson);
             return;
         }
@@ -150,13 +151,16 @@ const TeacherDashboard = () => {
         if (!rejectingLesson) return;
         setRejecting(true);
         try {
-            await apiClient.patch(`/lessons/${rejectingLesson.id}/feedback`, {}, {
-                params: { status: 'cancelled' }
-            });
+            const res = await apiClient.patch(`/lessons/${rejectingLesson.id}/teacher-cancel`);
             fetchLessons();
-            addToast('success', `Lesson rejected. Student will be refunded $${rejectingLesson.price.toFixed(2)}.`);
+            const refundMsg = res.data.refund === 'refunded'
+                ? ' A full Stripe refund has been issued.'
+                : (res.data.refund === 'refund_failed'
+                    ? ' WARNING: refund failed — check Stripe dashboard.'
+                    : '');
+            addToast('success', `Lesson cancelled. Student has been notified.${refundMsg}`);
         } catch (err: any) {
-            addToast('error', err?.response?.data?.detail || 'Failed to reject lesson.');
+            addToast('error', err?.response?.data?.detail || 'Failed to cancel lesson.');
         } finally {
             setRejecting(false);
             setRejectingLesson(null);
@@ -356,8 +360,7 @@ const TeacherDashboard = () => {
                                                     onChange={(e) => updateStatus(lesson.id, e.target.value, lesson)}
                                                     className={`px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider border border-transparent shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all ${statusColor(lesson.status)}`}
                                                 >
-                                                    {/* pending is intentionally absent — payment-backed lessons auto-confirm via Stripe webhook;
-                                                        the teacher only sees lessons that are already scheduled */}
+                                                    <option value="pending" className="bg-white text-gray-700">pending</option>
                                                     <option value="scheduled" className="bg-white text-gray-700">scheduled</option>
                                                     <option value="completed" className="bg-white text-gray-700">completed</option>
                                                     <option value="cancelled" className="bg-white text-gray-700">cancelled</option>

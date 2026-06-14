@@ -410,6 +410,81 @@ def cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require_student
     }
 
 
+@router.patch("/{lesson_id}/teacher-cancel")
+def teacher_cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require_teacher), db: Session = Depends(database.get_db)):
+    """Teacher cancels (rejects) a lesson — any status except completed.
+
+    If the lesson was paid via Stripe, a full refund is issued automatically.
+    The student is notified by email. No 24h restriction applies; the teacher
+    can cancel at any time.
+    """
+    lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    if lesson.status == "completed":
+        raise HTTPException(status_code=400, detail="Completed lessons cannot be cancelled.")
+
+    old_status = lesson.status
+
+    # ── Issue Stripe refund if the lesson was paid ──────────────────────────
+    refund_status: Optional[str] = None
+    if lesson.stripe_session_id and lesson.payment_method == "stripe":
+        from app.utils.stripe import refund_checkout_session
+        refunded = refund_checkout_session(lesson.stripe_session_id)
+        refund_status = "refunded" if refunded else "refund_failed"
+        if refunded:
+            print(f"[TEACHER-CANCEL] Full Stripe refund issued for lesson {lesson_id} "
+                  f"(session={lesson.stripe_session_id}).")
+        else:
+            print(f"[TEACHER-CANCEL] WARNING — refund attempt failed for lesson {lesson_id} "
+                  f"(session={lesson.stripe_session_id}). Check Stripe dashboard manually.")
+
+    lesson.status = "cancelled"
+    db.commit()
+    db.refresh(lesson)
+
+    # ── Send rejection emails ──────────────────────────────────────────────
+    from app.utils.email import send_student_rejection_email, send_teacher_rejection_confirmation_email
+
+    student = db.query(student_models.Student).filter(
+        student_models.Student.id == lesson.student_id
+    ).first()
+
+    lesson_date_str = lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if lesson.start_time else "TBD"
+
+    if student:
+        send_student_rejection_email(
+            student_email=student.email,
+            student_name=student.name,
+            lesson_date=lesson_date_str,
+            lesson_type=lesson.lesson_type,
+            price=lesson.price,
+        )
+
+    # Teacher notification
+    teacher = db.query(teacher_models.Teacher).filter(
+        teacher_models.Teacher.id == lesson.teacher_id
+    ).first()
+    teacher_email = os.getenv("TEACHER_NOTIFICATION_EMAIL", "")
+    teacher_name = teacher.name if teacher else user.get("name", "Teacher")
+
+    send_teacher_rejection_confirmation_email(
+        teacher_email=teacher_email,
+        teacher_name=teacher_name,
+        student_name=student.name if student else "Unknown",
+        lesson_date=lesson_date_str,
+        lesson_type=lesson.lesson_type,
+    )
+
+    return {
+        "status": "success",
+        "message": "Lesson cancelled by teacher. The student has been notified.",
+        "lesson_id": lesson.id,
+        "refund": refund_status,
+    }
+
+
 @router.get("/verify-payment/{session_id}")
 def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
     """
@@ -617,7 +692,38 @@ def update_lesson_feedback(
             )
 
         elif old_status == "pending" and new_status == "cancelled":
-            # Teacher rejected the lesson — notify student about refund
+            # Teacher rejected a pending (unpaid/manual) lesson — notify student about refund
+            if student_email:
+                send_student_rejection_email(
+                    student_email=student_email,
+                    student_name=student_name,
+                    lesson_date=lesson_date_str,
+                    lesson_type=db_lesson.lesson_type,
+                    price=db_lesson.price,
+                )
+            send_teacher_rejection_confirmation_email(
+                teacher_email=teacher_email,
+                teacher_name=teacher_name,
+                student_name=student_name,
+                lesson_date=lesson_date_str,
+                lesson_type=db_lesson.lesson_type,
+            )
+
+        elif old_status == "scheduled" and new_status == "cancelled":
+            # Teacher cancelled an already-scheduled (paid) lesson — issue Stripe refund
+            refund_status: Optional[str] = None
+            if db_lesson.stripe_session_id and db_lesson.payment_method == "stripe":
+                from app.utils.stripe import refund_checkout_session
+                refunded = refund_checkout_session(db_lesson.stripe_session_id)
+                refund_status = "refunded" if refunded else "refund_failed"
+                if refunded:
+                    print(f"[FEEDBACK-CANCEL] Full Stripe refund issued for lesson {lesson_id} "
+                          f"(session={db_lesson.stripe_session_id}).")
+                else:
+                    print(f"[FEEDBACK-CANCEL] WARNING — refund attempt failed for lesson {lesson_id} "
+                          f"(session={db_lesson.stripe_session_id}). Check Stripe dashboard manually.")
+
+            # Notify student and teacher
             if student_email:
                 send_student_rejection_email(
                     student_email=student_email,

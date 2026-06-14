@@ -222,3 +222,44 @@ def construct_webhook_event(payload: bytes, signature_header: str) -> Optional[s
     except Exception as e:
         print(f"[STRIPE] Error constructing webhook event: {e}")
         return None
+
+
+# ── Refund helper ───────────────────────────────────────────────────────────
+
+def refund_checkout_session(session_id: str) -> bool:
+    """
+    Issue a full refund for a Stripe Checkout Session.
+
+    Retrieves the Payment Intent ID from the session, then creates a full
+    refund via Stripe. Returns True on success, False on failure.
+
+    Only works when Stripe is properly configured.
+    """
+    if not session_id or not is_stripe_configured():
+        print("[STRIPE] Cannot refund — Stripe not configured or no session_id.")
+        return False
+
+    try:
+        stripe.api_key = _get_secret_key()
+
+        # Retrieve the Checkout Session to get the payment_intent
+        session = stripe.checkout.Session.retrieve(session_id)
+        payment_intent_id = session.get("payment_intent")
+
+        if not payment_intent_id:
+            print(f"[STRIPE] No payment_intent found on session {session_id}. Cannot refund.")
+            return False
+
+        # Issue a full refund
+        refund = stripe.Refund.create(
+            payment_intent=payment_intent_id,
+            reason="requested_by_customer",
+        )
+
+        print(f"[STRIPE] Full refund issued for session {session_id}: "
+              f"refund_id={refund.id}, amount={refund.amount}, status={refund.status}")
+        return refund.status in ("succeeded", "pending")
+
+    except stripe.StripeError as e:
+        print(f"[STRIPE] Refund failed for session {session_id}: {e}")
+        return False
