@@ -77,5 +77,10 @@
     "lesson.cancelling": "Cancelando...",
     "lesson.cancelButton": "Cancelar Clase",
     "lesson.cancelSuccess": "Clase cancelada correctamente. El horario ya está disponible.",
-    "lesson.cancelError": "No se pudo cancelar la clase. Puede que falten menos de 24h para el inicio."
-}
+    "lesson.cancelError": "No se pudo cancelar la clase. Puede que falten menos de 24h para el inicio.",
+    "calendar.pastDate": "Esta fecha ya ha pasado",
+    "calendar.noSlots": "No hay horarios disponibles en esta fecha. Es posible que la profesora no haya configurado su disponibilidad o que todos los horarios estén reservados.",
+    "calendar.noSlotsShort": "No hay horarios disponibles en esta fecha.",
+    "calendar.selectDatePrompt": "Selecciona una fecha arriba para ver los horarios disponibles",
+    "calendar.loadError": "No se pudieron cargar los horarios. Por favor, inténtalo de nuevo más tarde."
+  }

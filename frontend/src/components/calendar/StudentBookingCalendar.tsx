@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Loader, Lock } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader, Lock, Info } from 'lucide-react';
 import { format, addDays, startOfWeek, isBefore, startOfDay, addMinutes } from 'date-fns';
 import { formatTimeInLocalzone, getLocalTimezone } from '../../utils/timezones';
 import { API_URL } from '../../config';
+import { useLanguage } from '../../i18n';
 
 const CUTOFF_HOURS = 12;
 
@@ -20,6 +21,7 @@ export const StudentBookingCalendar = ({
   const [slots, setSlots] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const { t } = useLanguage();
 
   const days = Array.from({ length: 7 }).map((_, i) => addDays(currentWeekStart, i));
 
@@ -42,7 +44,7 @@ export const StudentBookingCalendar = ({
       setSlots(data.slots || []);
     } catch (err) {
       console.error(err);
-      setError('Could not load available times. Please try again later.');
+      setError(t('calendar.loadError'));
     } finally {
       setLoading(false);
     }
@@ -86,6 +88,7 @@ export const StudentBookingCalendar = ({
               key={i}
               onClick={() => setSelectedDate(day)}
               disabled={disabled}
+              title={disabled ? t('calendar.pastDate') : undefined}
               className={`flex flex-col items-center p-3 rounded-2xl transition-all ${
                 disabled ? 'opacity-30 cursor-not-allowed' :
                 selected ? 'bg-indigo-600 text-white shadow-lg scale-105' :
@@ -99,6 +102,15 @@ export const StudentBookingCalendar = ({
         })}
       </div>
 
+      {!selectedDate && (
+        <div className="border-t border-gray-100 pt-8 animate-fade-in">
+          <div className="text-center p-8 bg-indigo-50/50 rounded-2xl border border-dashed border-indigo-200">
+            <Info size={20} className="mx-auto mb-2 text-indigo-400" />
+            <p className="text-indigo-600 font-medium">{t('calendar.selectDatePrompt')}</p>
+          </div>
+        </div>
+      )}
+
       {selectedDate && (
         <div className="border-t border-gray-100 pt-8 animate-fade-in">
           <h3 className="font-bold text-gray-900 mb-6 flex items-center justify-between">
@@ -110,7 +122,8 @@ export const StudentBookingCalendar = ({
           
           {!loading && !error && slots.length === 0 && (
             <div className="text-center p-8 bg-gray-50 rounded-2xl border border-dashed border-gray-200">
-               <p className="text-gray-500 font-medium">No available slots on this date.</p>
+              <Info size={20} className="mx-auto mb-2 text-gray-400" />
+              <p className="text-gray-500 font-medium">{t('calendar.noSlots')}</p>
             </div>
           )}
 

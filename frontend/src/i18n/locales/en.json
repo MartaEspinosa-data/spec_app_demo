@@ -77,5 +77,10 @@
   "lesson.cancelling": "Cancelling...",
   "lesson.cancelButton": "Cancel Lesson",
   "lesson.cancelSuccess": "Lesson cancelled successfully. The time slot is now available.",
-  "lesson.cancelError": "Failed to cancel lesson. It may be too close to the start time (< 24h)."
+  "lesson.cancelError": "Failed to cancel lesson. It may be too close to the start time (< 24h).",
+  "calendar.pastDate": "This date has already passed",
+  "calendar.noSlots": "No available slots on this date. The teacher may not have set their availability or all slots may be booked.",
+  "calendar.noSlotsShort": "No available slots on this date.",
+  "calendar.selectDatePrompt": "Select a date above to see available times",
+  "calendar.loadError": "Could not load available times. Please try again later."
 }

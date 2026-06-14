@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Lock, Info } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config';
+import { useLanguage } from '../i18n';
 // Note: slots endpoint is public (no auth required) so we use raw axios here
 
 const CUTOFF_HOURS = 12;
@@ -20,6 +21,7 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
     const cutoffTime = Date.now() + CUTOFF_HOURS * 60 * 60 * 1000;
     const bookableSlots = availableSlots.filter(s => new Date(s).getTime() >= cutoffTime);
     const greyedSlots = availableSlots.filter(s => new Date(s).getTime() < cutoffTime);
+    const { t } = useLanguage();
 
     const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
     const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -67,6 +69,7 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
             <button
                 key={day}
                 onClick={() => handleDateClick(day)}
+                title={new Date(viewDate.getFullYear(), viewDate.getMonth(), day) < new Date(new Date().toDateString()) ? t('calendar.pastDate') : undefined}
                 className={`h-12 w-full rounded-xl font-bold transition-all flex items-center justify-center ${isSelected
                     ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-200 scale-110 z-10'
                     : 'text-gray-700 hover:bg-indigo-50 hover:text-indigo-600'
@@ -171,7 +174,8 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
                         </div>
                     ) : (
                         <div className="text-center py-10 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">
-                            <p className="text-gray-400 font-bold px-4">No hay horarios disponibles para este día</p>
+                            <Info size={20} className="mx-auto mb-2 text-gray-400" />
+                            <p className="text-gray-500 font-medium px-4">{t('calendar.noSlots')}</p>
                         </div>
                     )}
                 </div>
