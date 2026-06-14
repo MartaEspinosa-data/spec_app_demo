@@ -18,3 +18,4 @@ stripe>=13.0.0
 tzdata>=2024.0
 
 # Database (for SQLite, included; for Postgres, add psycopg2-binary)
+psycopg2-binary>=2.9.0

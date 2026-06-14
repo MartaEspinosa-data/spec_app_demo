@@ -3,11 +3,13 @@ load_dotenv()
 
 import time
 import os
+from pathlib import Path
 from contextlib import asynccontextmanager
 from collections import defaultdict
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 from app.api import teachers, lessons, availability, students, webhooks
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.utils.reminders import check_reminders
@@ -38,8 +40,8 @@ app.include_router(availability.router)
 app.include_router(students.router)
 app.include_router(webhooks.router)
 
-# Configure CORS
-origins = [
+# Configure CORS — allow FRONTEND_URL and additional origins from env
+_default_origins = [
     "http://localhost:5173",
     "http://localhost:5174",
     "https://localhost:5173",
@@ -50,6 +52,11 @@ origins = [
     "https://127.0.0.1:5174",
     "http://localhost:3000",
 ]
+_extra_origins = [o.strip() for o in os.getenv("EXTRA_CORS_ORIGINS", "").split(",") if o.strip()]
+_frontend_url = os.getenv("FRONTEND_URL", "")
+if _frontend_url and _frontend_url not in _default_origins:
+    _extra_origins.append(_frontend_url)
+origins = _default_origins + _extra_origins
 
 app.add_middleware(
     CORSMiddleware,
@@ -58,6 +65,11 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# ── Serve frontend static files (when bundled in Docker) ────────────────────
+_FRONTEND_DIST = Path("/app/frontend_dist")
+if _FRONTEND_DIST.is_dir():
+    app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="frontend-assets")
 
 
 # ── Request Logging Middleware ────────────────────────────────────────────────
@@ -137,6 +149,17 @@ def health_check():
     return {"status": "healthy"}
 
 
-@app.get("/")
-def read_root():
+# ── SPA fallback: serve index.html for any non-API route ────────────────────
+_INDEX_HTML = _FRONTEND_DIST / "index.html"
+
+
+@app.get("/{full_path:path}")
+async def serve_spa(request: Request, full_path: str):
+    """Serve the React SPA. API routes are handled by routers above;
+    everything else falls through to index.html for client-side routing."""
+    if _FRONTEND_DIST.is_dir() and _INDEX_HTML.exists():
+        candidate = _FRONTEND_DIST / full_path
+        if candidate.is_file():
+            return FileResponse(candidate)
+        return FileResponse(_INDEX_HTML)
     return {"message": "Welcome to Spanish Tutor Platform API"}

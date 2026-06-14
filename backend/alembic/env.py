@@ -26,6 +26,11 @@ from app.models.availability import TeacherAvailability
 
 target_metadata = Base.metadata
 
+# Override sqlalchemy.url with DATABASE_URL env var when available (e.g. PostgreSQL in production)
+_database_url = os.getenv("DATABASE_URL")
+if _database_url:
+    config.set_main_option("sqlalchemy.url", _database_url)
+
 # other values from the config, defined by the needs of env.py,
 # can be acquired:
 # my_important_option = config.get_main_option("my_important_option")
