@@ -234,26 +234,19 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
     db.commit()
     db.refresh(db_lesson)
 
-    # 5. Create a Stripe Checkout Session with the real lesson_id in metadata
-    from app.utils.stripe import create_checkout_session, is_stripe_configured
-    stripe_session_id: Optional[str] = None
+    # 5. Build Stripe Payment Link URL with client_reference_id={lesson_id}
+    from app.utils.stripe import get_payment_link_url, is_stripe_configured
     stripe_checkout_url: Optional[str] = None
     payment_method = "stripe" if is_stripe_configured() else "manual"
 
     if is_stripe_configured():
-        slot_iso = utc_start.strftime("%Y-%m-%dT%H:%M:%SZ") if utc_start else ""
-        stripe_session_id, stripe_checkout_url = create_checkout_session(
-            lesson_id=db_lesson.id,
+        stripe_checkout_url = get_payment_link_url(
             duration=lesson.duration,
-            student_name=db_student.name,
+            lesson_id=db_lesson.id,
             student_email=db_student.email,
-            slot_iso=slot_iso,
         )
-        if stripe_session_id:
-            db_lesson.stripe_session_id = stripe_session_id
         if stripe_checkout_url:
             db_lesson.stripe_payment_link_url = stripe_checkout_url
-        if stripe_session_id or stripe_checkout_url:
             db_lesson.payment_method = "stripe"
         else:
             db_lesson.payment_method = "manual"
@@ -265,13 +258,23 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         db.refresh(db_lesson)
 
     # 6. Send confirmation email to student immediately upon booking
-    from app.utils.email import send_lesson_confirmation
+    from app.utils.email import send_lesson_confirmation, send_teacher_notification
     send_lesson_confirmation(
         student_email=db_student.email,
         student_name=db_student.name,
         lesson_date=lesson_date_str,
         duration=db_lesson.duration,
         lesson_type=db_lesson.lesson_type
+    )
+
+    # 6b. Send teacher notification immediately — don't wait for webhook
+    payment_account_info = "Stripe payment — waiting for checkout completion" if db_lesson.payment_method == "stripe" else f"Manual payment — student email: {db_student.email}"
+    send_teacher_notification(
+        student_name=db_student.name,
+        lesson_date=lesson_date_str,
+        duration=db_lesson.duration,
+        lesson_type=db_lesson.lesson_type,
+        student_payment_account=payment_account_info,
     )
 
     # 7. Return response — includes the Stripe Checkout URL if configured
@@ -354,18 +357,31 @@ def reschedule_lesson(lesson_id: str, new_start_time: str, user: Dict[str, Any] 
     db.commit()
     db.refresh(lesson)
     
+    # Update Stripe Checkout Session metadata if this was a stripe-paid lesson.
+    # Keeps the 'slot' field in sync for reconciliation and support lookups.
+    if lesson.stripe_session_id:
+        from app.utils.stripe import update_session_metadata
+        new_slot_iso = utc_new_time.strftime("%Y-%m-%dT%H:%M:%SZ")
+        update_session_metadata(
+            lesson.stripe_session_id,
+            {"slot": new_slot_iso, "rescheduled": "true"}
+        )
+    
     # Trigger notifications (mock or real)
     print(f"Lesson {lesson_id} rescheduled to {new_start_time}")
     
     return {
         "status": "success",
         "lesson_id": lesson.id,
-        "new_start_time": (lesson.start_time.isoformat() + "Z") if lesson.start_time else None
+        "new_start_time": (lesson.start_time.isoformat() + "Z") if lesson.start_time else None,
+        "stripe_metadata_updated": bool(lesson.stripe_session_id),
     }
 
 @router.patch("/{lesson_id}/cancel")
 def cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require_student), db: Session = Depends(database.get_db)):
-    """Student cancels their own scheduled lesson. The time slot becomes available again."""
+    """Student cancels their own scheduled lesson. The time slot becomes available again.
+    
+    """
     lesson = db.query(models.Lesson).filter(models.Lesson.id == lesson_id).first()
     if not lesson:
         raise HTTPException(status_code=404, detail="Lesson not found")
@@ -392,6 +408,115 @@ def cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require_student
         "message": "Lesson cancelled. The time slot is now available for other students.",
         "lesson_id": lesson.id,
     }
+
+
+@router.get("/verify-payment/{session_id}")
+def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
+    """
+    Fallback for Stripe webhook reliability.
+
+    The frontend calls this from /payment-success to poll Stripe directly
+    and confirm the lesson when the webhook hasn't fired yet.
+
+    If payment_status = "paid" but the associated lesson is still "pending",
+    this endpoint promotes it to "scheduled" immediately.
+    """
+    from app.utils.stripe import is_stripe_configured
+    import stripe
+
+    if not is_stripe_configured():
+        return {
+            "status": "unconfigured",
+            "message": "Stripe is not configured on this server.",
+        }
+
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+
+    try:
+        session = stripe.checkout.Session.retrieve(session_id)
+    except stripe.StripeError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid or expired session: {str(e)}")
+
+    payment_status = session.get("payment_status")
+    metadata = session.get("metadata", {}) or {}
+    payment_type = metadata.get("payment_type", "lesson")
+
+    if payment_status != "paid":
+        return {
+            "status": "pending",
+            "message": "Payment has not been completed yet.",
+            "payment_status": payment_status,
+        }
+
+    # ── Lesson payment ───────────────────────────────────────────────
+    booking_id = metadata.get("booking_id")
+    client_reference_id = session.get("client_reference_id")
+
+    # 1. Look up by stripe_session_id
+    lesson = db.query(models.Lesson).filter(
+        models.Lesson.stripe_session_id == session_id
+    ).first()
+
+    # 2. Look up by booking_id in metadata (checkout-session approach)
+    if not lesson and booking_id:
+        lesson = db.query(models.Lesson).filter(
+            models.Lesson.id == booking_id
+        ).first()
+
+    # 3. Look up by client_reference_id (Payment Link approach)
+    if not lesson and client_reference_id:
+        lesson = db.query(models.Lesson).filter(
+            models.Lesson.id == client_reference_id
+        ).first()
+
+    if lesson:
+        was_pending = lesson.status == "pending"
+
+        # Always fill in the stripe_session_id if missing
+        if not lesson.stripe_session_id:
+            lesson.stripe_session_id = session_id
+        if not lesson.payment_method or lesson.payment_method == "manual":
+            lesson.payment_method = "stripe"
+
+        # Promote from pending → scheduled when payment is confirmed
+        if lesson.status == "pending":
+            lesson.status = "scheduled"
+            db.commit()
+            db.refresh(lesson)
+            print(f"[VERIFY-PAYMENT] Lesson {lesson.id} promoted pending→scheduled via fallback.")
+
+            # Send teacher notification (webhook may have been missed)
+            from app.utils.email import send_teacher_notification
+            student = db.query(student_models.Student).filter(
+                student_models.Student.id == lesson.student_id
+            ).first()
+            if student:
+                lesson_date_str = lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if lesson.start_time else "TBD"
+                send_teacher_notification(
+                    student_name=student.name,
+                    lesson_date=lesson_date_str,
+                    duration=lesson.duration,
+                    lesson_type=lesson.lesson_type,
+                    student_payment_account=f"Stripe session: {session_id}",
+                )
+        elif not was_pending and lesson.stripe_session_id != session_id:
+            # Lesson already had a different session_id; update it
+            lesson.stripe_session_id = session_id
+            db.commit()
+            db.refresh(lesson)
+
+        return {
+            "status": "confirmed",
+            "message": "Lesson payment verified.",
+            "record_status": lesson.status,
+            "lesson_id": lesson.id,
+        }
+    else:
+        return {
+            "status": "confirmed",
+            "message": "Payment verified, but no matching lesson record found. The record may take a moment to appear.",
+            "payment_status": payment_status,
+        }
 
 
 @router.delete("/teacher/{teacher_id}")
@@ -443,11 +568,16 @@ def update_lesson_feedback(
             raise HTTPException(status_code=400, detail="Invalid status value")
         db_lesson.status = status
 
+    new_status = db_lesson.status
+
     db.commit()
     db.refresh(db_lesson)
 
     # --- Send notification emails on status transitions ---
-    new_status = db_lesson.status
+    # NOTE: Payment-backed (stripe) lessons transition pending→scheduled
+    # automatically via the Stripe webhook. The teacher-accept path below
+    # only fires for non-stripe/manual lessons or edge cases where the
+    # teacher explicitly promotes a pending lesson.
     if old_status != new_status:
         from app.utils.email import (
             send_teacher_acceptance_email,
@@ -459,7 +589,7 @@ def update_lesson_feedback(
 
         # Teacher info (model has no email field, use env var)
         teacher = db_lesson.teacher
-        teacher_email = os.getenv("TEACHER_NOTIFICATION_EMAIL", "martaespinosagarcia@gmail.com")
+        teacher_email = os.getenv("TEACHER_NOTIFICATION_EMAIL", "")
         teacher_name = teacher.name if teacher else "Marta"
 
         # Student info
@@ -468,7 +598,8 @@ def update_lesson_feedback(
         student_name = student.name if student else "Student"
 
         if old_status == "pending" and new_status == "scheduled":
-            # Teacher accepted the lesson
+            # Teacher manually accepted a non-stripe/manual lesson
+            # (Payment-backed lessons skip this path entirely; the webhook auto-schedules them)
             if student_email:
                 send_student_acceptance_email(
                     student_email=student_email,

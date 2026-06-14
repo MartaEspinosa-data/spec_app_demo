@@ -14,4 +14,7 @@ python-jose[cryptography]>=3.3.0
 # Payments
 stripe>=13.0.0
 
+# Timezone data (IANA database for zoneinfo on Windows / slim Linux containers)
+tzdata>=2024.0
+
 # Database (for SQLite, included; for Postgres, add psycopg2-binary)

@@ -19,7 +19,8 @@ class Student(StudentBase):
 from pydantic import BaseModel, EmailStr, field_validator
 from typing import Optional
 from datetime import datetime
-import zoneinfo
+
+from app.utils.timezones import validate_timezone
 
 VALID_LESSON_TYPES = [
     "Conversación",
@@ -61,14 +62,8 @@ class LessonCreate(BaseModel):
 
     @field_validator("student_timezone")
     @classmethod
-    def validate_timezone(cls, v: Optional[str]) -> Optional[str]:
-        if v is None:
-            return "UTC"
-        try:
-            zoneinfo.ZoneInfo(v)
-            return v
-        except (zoneinfo.ZoneInfoNotFoundError, KeyError):
-            raise ValueError(f"Invalid IANA timezone '{v}'. Use e.g. 'Europe/Madrid', 'America/New_York'.")
+    def _validate_student_timezone(cls, v: Optional[str]) -> Optional[str]:
+        return validate_timezone(v)
 
 class Lesson(BaseModel):
     id: str

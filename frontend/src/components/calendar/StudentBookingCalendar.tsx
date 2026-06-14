@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { ChevronLeft, ChevronRight, Loader } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Loader, Lock } from 'lucide-react';
 import { format, addDays, startOfWeek, isBefore, startOfDay, addMinutes } from 'date-fns';
 import { formatTimeInLocalzone, getLocalTimezone } from '../../utils/timezones';
 import { API_URL } from '../../config';
+
+const CUTOFF_HOURS = 12;
 
 export const StudentBookingCalendar = ({ 
   teacherId, 
@@ -112,23 +114,66 @@ export const StudentBookingCalendar = ({
             </div>
           )}
 
-          {!loading && !error && slots.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
-              {slots.map((slotIso) => {
-                const startTime = new Date(slotIso);
-                const endTime = addMinutes(startTime, durationMinutes);
-                return (
-                  <button
-                    key={slotIso}
-                    onClick={() => onSlotSelect(slotIso)}
-                    className="px-4 py-3 bg-white border-2 border-gray-100 rounded-xl font-bold text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 transition-all text-sm"
-                  >
-                    {formatTimeInLocalzone(slotIso)} - {formatTimeInLocalzone(endTime.toISOString())}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+          {!loading && !error && slots.length > 0 && (() => {
+            const cutoffTime = Date.now() + CUTOFF_HOURS * 60 * 60 * 1000;
+            const availableSlots = slots.filter(s => new Date(s).getTime() >= cutoffTime);
+            const greyedSlots = slots.filter(s => new Date(s).getTime() < cutoffTime);
+
+            return (
+              <div className="space-y-3">
+                {availableSlots.length > 0 && (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                    {availableSlots.map((slotIso) => {
+                      const startTime = new Date(slotIso);
+                      const endTime = addMinutes(startTime, durationMinutes);
+                      return (
+                        <button
+                          key={slotIso}
+                          onClick={() => onSlotSelect(slotIso)}
+                          className="px-4 py-3 bg-white border-2 border-gray-100 rounded-xl font-bold text-indigo-600 hover:border-indigo-600 hover:bg-indigo-50 transition-all text-sm"
+                        >
+                          {formatTimeInLocalzone(slotIso)} - {formatTimeInLocalzone(endTime.toISOString())}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+
+                {greyedSlots.length > 0 && (
+                  <div className="space-y-2">
+                    <p className="text-xs font-medium text-amber-600 flex items-center gap-1.5 px-1">
+                      <Lock size={12} />
+                      Unavailable — must be booked at least {CUTOFF_HOURS} hours in advance
+                    </p>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 sm:gap-3">
+                      {greyedSlots.map((slotIso) => {
+                        const startTime = new Date(slotIso);
+                        const endTime = addMinutes(startTime, durationMinutes);
+                        return (
+                          <button
+                            key={slotIso}
+                            disabled
+                            className="px-4 py-3 bg-gray-100 border-2 border-gray-100 rounded-xl font-bold text-gray-400 cursor-not-allowed transition-all text-sm line-through decoration-gray-300"
+                            title="Must be booked at least 12 hours in advance"
+                          >
+                            {formatTimeInLocalzone(slotIso)} - {formatTimeInLocalzone(endTime.toISOString())}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {availableSlots.length === 0 && greyedSlots.length > 0 && (
+                  <div className="text-center p-4 bg-amber-50 rounded-2xl border border-amber-100">
+                    <p className="text-amber-700 font-medium text-sm">
+                      All remaining slots today require at least {CUTOFF_HOURS} hours advance booking. Please try a later date.
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
         </div>
       )}
     </div>

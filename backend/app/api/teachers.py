@@ -70,7 +70,7 @@ def _validate_teacher_password(plain: str, teacher: teacher_models.Teacher) -> b
     Check the provided password against the teacher's credentials.
     Priority: 1) DB-stored bcrypt hash, 2) TEACHER_PASSWORD env var, 3) plain text env.
     """
-    teacher_email = os.getenv("TEACHER_EMAIL", "martaespinosagarcia@gmail.com")
+    teacher_email = os.getenv("TEACHER_EMAIL", "")
 
     # 1) Try DB-stored password_hash first (set via forgot-password or setup)
     if teacher and teacher.password_hash:
@@ -97,7 +97,7 @@ def teacher_login(data: TeacherLoginRequest, db: Session = Depends(get_db)):
     Teacher login. Validates against DB password_hash first, then falls back
     to TEACHER_PASSWORD env var for backward compatibility.
     """
-    teacher_email = os.getenv("TEACHER_EMAIL", "martaespinosagarcia@gmail.com")
+    teacher_email = os.getenv("TEACHER_EMAIL", "")
 
     if data.email.lower() != teacher_email.lower():
         raise HTTPException(status_code=401, detail="Invalid email or password.")
@@ -147,7 +147,7 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     Send a password reset email to the teacher.
     Always returns 200 to prevent email enumeration.
     """
-    teacher_email = os.getenv("TEACHER_EMAIL", "martaespinosagarcia@gmail.com")
+    teacher_email = os.getenv("TEACHER_EMAIL", "")
 
     # Always return same message to prevent email enumeration
     if data.email.lower() != teacher_email.lower():

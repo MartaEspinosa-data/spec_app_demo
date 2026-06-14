@@ -104,7 +104,7 @@ const StudentLogin = () => {
                         {isRegister ? 'Create Account' : 'Student Login'}
                     </h1>
                     <p className="text-gray-500 font-medium text-sm sm:text-base">
-                        {isRegister ? 'Sign up to track your lessons and packages' : 'Access your booked lessons and packages'}
+                        {isRegister ? 'Sign up to book and track your lessons' : 'Access your booked lessons'}
                     </p>
                 </div>
 

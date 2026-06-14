@@ -2,7 +2,7 @@
 Stripe Checkout Session integration.
 
 This module provides helpers to create Stripe Checkout Sessions for lesson
-bookings and package purchases, and to verify incoming webhook signatures.
+bookings and to verify incoming webhook signatures.
 
 Instead of dynamically creating Price objects (old Payment Links approach),
 this module uses pre-defined Stripe Price IDs configured via environment
@@ -42,35 +42,61 @@ def is_stripe_configured() -> bool:
     return bool(key and key.startswith("sk_"))
 
 
-# ── Price ID lookup (pre-defined products in Stripe dashboard) ────────────
+# ── Payment Link helpers (pre-built Stripe Payment Links) ────────────────
 
-def get_price_ids() -> Dict[int, str]:
+def get_payment_link_urls() -> Dict[int, str]:
     """
-    Return the mapping of duration → Stripe Price ID.
+    Return the mapping of duration → Stripe Payment Link URL.
 
-    These are configured in the Stripe dashboard (Product Catalog → Products).
-    Each product corresponds to a lesson duration:
-      - 30 min → price_1xxx...
-      - 45 min → price_1xxx...
-      - 60 min → price_1xxx...
+    These are pre-built Payment Links created in the Stripe Dashboard:
+      - 30 min → https://buy.stripe.com/test_XXX...
+      - 45 min → https://buy.stripe.com/test_XXX...
+      - 60 min → https://buy.stripe.com/test_XXX...
 
     Set these in your .env file as:
-      STRIPE_PRICE_ID_30=price_1RabcdEfghijklmn
-      STRIPE_PRICE_ID_45=price_1RbcdeEfghijklmn
-      STRIPE_PRICE_ID_60=price_1RcdefEfghijklmn
+      STRIPE_PAYMENT_LINK_30=https://buy.stripe.com/test_...
+      STRIPE_PAYMENT_LINK_45=https://buy.stripe.com/test_...
+      STRIPE_PAYMENT_LINK_60=https://buy.stripe.com/test_...
     """
     return {
-        30: os.getenv("STRIPE_PRICE_ID_30", ""),
-        45: os.getenv("STRIPE_PRICE_ID_45", ""),
-        60: os.getenv("STRIPE_PRICE_ID_60", ""),
+        30: os.getenv("STRIPE_PAYMENT_LINK_30", ""),
+        45: os.getenv("STRIPE_PAYMENT_LINK_45", ""),
+        60: os.getenv("STRIPE_PAYMENT_LINK_60", ""),
     }
 
 
-def get_price_id_for_duration(duration: int) -> Optional[str]:
-    """Get the Stripe Price ID for a given lesson duration, or None if not configured."""
-    price_ids = get_price_ids()
-    pid = price_ids.get(duration, "")
-    return pid if pid else None
+def get_payment_link_url(
+    duration: int,
+    lesson_id: str,
+    student_email: str = "",
+) -> Optional[str]:
+    """
+    Build a Payment Link URL pointing at the correct pre-built Stripe Payment Link.
+
+    Appends query parameters so Stripe associates the resulting Checkout Session
+    with our lesson:
+      - client_reference_id={lesson_id}  → looked up by the webhook
+      - prefilled_email={student_email}   → pre-fills the email field
+
+    Returns None if no Payment Link is configured for the given duration.
+    """
+    links = get_payment_link_urls()
+    base_url = links.get(duration, "")
+    if not base_url:
+        print(f"[STRIPE] No Payment Link configured for duration={duration}min.")
+        return None
+
+    import urllib.parse
+    params = {"client_reference_id": lesson_id}
+    if student_email:
+        params["prefilled_email"] = student_email
+
+    separator = "&" if "?" in base_url else "?"
+    query_string = urllib.parse.urlencode(params)
+    full_url = f"{base_url}{separator}{query_string}"
+
+    print(f"[STRIPE] Payment Link URL built: {full_url}")
+    return full_url
 
 
 # ── Checkout Session creators ──────────────────────────────────────────────
@@ -142,84 +168,32 @@ def create_checkout_session(
         return None, None
 
 
-def create_package_checkout_session(
-    package_id: str,
-    duration: int,
-    price_eur: float,
-    student_name: str,
-    student_email: str,
-    total_lessons: int = 5,
-    success_url: Optional[str] = None,
-    cancel_url: Optional[str] = None,
-) -> Tuple[Optional[str], Optional[str]]:
+# ── Session metadata updates (for reschedule, etc.) ─────────────────────────
+
+def update_session_metadata(session_id: str, metadata_updates: dict) -> bool:
     """
-    Create a Stripe Checkout Session for a lesson package purchase.
+    Update metadata on an existing Stripe Checkout Session.
 
-    Since package products vary in price (depending on duration and number of
-    lessons), we create a dynamic Price object on the fly rather than requiring
-    pre-defined Price IDs for every package combination.
+    Useful after a lesson is rescheduled — the original session's 'slot'
+    metadata becomes stale, so we update it to reflect the new time for
+    reconciliation and support purposes.
 
-    Returns a tuple of (session_id, session_url).
-    Returns (None, None) if Stripe is not configured.
+    Returns True on success, False on failure (logs the error, does not raise).
     """
-    if not is_stripe_configured():
-        print("[STRIPE] Stripe not configured — skipping package Checkout Session creation.")
-        return None, None
-
-    # Build success/cancel URLs from env if not provided
-    frontend_url = _get_frontend_url()
-    if success_url is None:
-        success_url = f"{frontend_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}"
-    if cancel_url is None:
-        cancel_url = f"{frontend_url}/payment-cancelled"
+    if not session_id or not is_stripe_configured():
+        return False
 
     try:
         stripe.api_key = _get_secret_key()
-        price_in_cents = int(round(price_eur * 100))
-
-        # Create a dynamic Price for the package
-        discount_pct = 3  # 3% package discount
-        single_price_eur = price_eur / (total_lessons * (1 - discount_pct / 100))
-
-        price_obj = stripe.Price.create(
-            currency="eur",
-            unit_amount=price_in_cents,
-            product_data={
-                "name": f"Paquete {total_lessons} Clases — {duration} min",
-                "description": (
-                    f"{total_lessons} × {duration} min lessons "
-                    f"(~€{single_price_eur:.2f}/lesson, {discount_pct}% dto.)"
-                ),
-            },
-        )
-
-        session = stripe.checkout.Session.create(
-            mode="payment",
-            customer_email=student_email,
-            line_items=[
-                {
-                    "price": price_obj.id,
-                    "quantity": 1,
-                }
-            ],
-            metadata={
-                "package_id": package_id,
-                "student_name": student_name,
-                "student_email": student_email,
-                "payment_type": "package",
-                "duration": str(duration),
-                "total_lessons": str(total_lessons),
-            },
-            success_url=success_url,
-            cancel_url=cancel_url,
-        )
-
-        print(f"[STRIPE] Package Checkout Session created: {session.id} -> {session.url}")
-        return session.id, session.url
-
+        session = stripe.checkout.Session.retrieve(session_id)
+        existing_metadata = session.get("metadata", {}) or {}
+        merged = {**existing_metadata, **metadata_updates}
+        stripe.checkout.Session.modify(session_id, metadata=merged)
+        print(f"[STRIPE] Updated metadata on session {session_id}: {metadata_updates}")
+        return True
     except stripe.StripeError as e:
-        print(f"[STRIPE ERROR] Failed to create package Checkout Session: {e}")
-        return None, None
+        print(f"[STRIPE] Failed to update session {session_id} metadata: {e}")
+        return False
 
 
 # ── Webhook verification ───────────────────────────────────────────────────

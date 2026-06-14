@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, BookOpen, Clock, DollarSign, Package, LogOut, Home, User, Play, Menu, X, XCircle } from 'lucide-react';
+import { Calendar, BookOpen, Clock, DollarSign, LogOut, Home, User, Play, Menu, X, XCircle } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { useToast } from '../components/Toast';
 import LanguageSelector from '../components/LanguageSelector';
@@ -22,22 +22,11 @@ interface LessonInfo {
     feedback_materials?: string;
 }
 
-interface PackageInfo {
-    id: string;
-    duration: number;
-    total_lessons: number;
-    remaining_lessons: number;
-    price_paid: number;
-    status: string;
-}
-
 const DashboardPage = () => {
     const { t } = useLanguage();
     const { addToast } = useToast();
     const navigate = useNavigate();
-    const [activeTab, setActiveTab] = useState<'lessons' | 'packages'>('lessons');
     const [lessons, setLessons] = useState<LessonInfo[]>([]);
-    const [packages, setPackages] = useState<PackageInfo[]>([]);
     const [loading, setLoading] = useState(true);
     const [reschedulingLesson, setReschedulingLesson] = useState<LessonInfo | null>(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -50,7 +39,6 @@ const DashboardPage = () => {
             return;
         }
         fetchLessons();
-        fetchPackages();
     }, []);
 
     const fetchLessons = async () => {
@@ -61,15 +49,6 @@ const DashboardPage = () => {
             addToast('error', err?.response?.data?.detail || 'Failed to load lessons.');
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchPackages = async () => {
-        try {
-            const res = await apiClient.get(`/packages/student/${studentAuth.student_id}`);
-            setPackages(res.data.packages || []);
-        } catch (err: any) {
-            addToast('error', err?.response?.data?.detail || 'Failed to load packages.');
         }
     };
 
@@ -115,16 +94,6 @@ const DashboardPage = () => {
 
     if (!studentAuth) return null;
 
-    const navItems = [
-        { name: 'My Lessons', icon: <Calendar size={20} />, key: 'lessons' as const },
-        { name: 'My Packages', icon: <Package size={20} />, key: 'packages' as const },
-    ];
-
-    const selectTab = (key: 'lessons' | 'packages') => {
-        setActiveTab(key);
-        setSidebarOpen(false);
-    };
-
     const SidebarContent = () => (
         <div className="flex flex-col gap-8">
             <div>
@@ -150,18 +119,6 @@ const DashboardPage = () => {
                     </div>
                 </div>
             </div>
-            <nav className="flex flex-col gap-2">
-                {navItems.map((item) => (
-                    <button
-                        key={item.key}
-                        onClick={() => selectTab(item.key)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === item.key ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-gray-50'}`}
-                    >
-                        {item.icon}
-                        {item.name}
-                    </button>
-                ))}
-            </nav>
         </div>
     );
 
@@ -178,7 +135,7 @@ const DashboardPage = () => {
                     {sidebarOpen ? <X size={22} className="text-gray-600" /> : <Menu size={22} className="text-gray-600" />}
                 </button>
                 <div className="text-base font-black text-indigo-600 tracking-tighter uppercase">
-                    {activeTab === 'lessons' ? 'My Lessons' : 'My Packages'}
+                    My Lessons
                 </div>
                 <div className="flex items-center gap-2">
                     <LanguageSelector />
@@ -204,19 +161,16 @@ const DashboardPage = () => {
             <main className="flex-1 p-4 sm:p-8 md:p-12 pt-16 md:pt-12">
                 <header className="mb-6 sm:mb-10">
                     <h1 className="text-2xl sm:text-4xl font-black text-gray-900 mb-2">
-                        {activeTab === 'lessons' ? t('dashboard.studentTitle') : 'My Packages'}
+                        {t('dashboard.studentTitle')}
                     </h1>
                     <p className="text-sm sm:text-base text-gray-500 font-medium">
-                        {activeTab === 'lessons'
-                            ? 'View all your booked and completed lessons.'
-                            : 'View your purchased lesson packages and remaining credits.'}
+                        View all your booked and completed lessons.
                     </p>
                 </header>
 
-                {activeTab === 'lessons' ? (
-                    loading ? (
-                        <div className="text-center py-20 text-gray-400 font-bold">Loading...</div>
-                    ) : lessons.length === 0 ? (
+                {loading ? (
+                    <div className="text-center py-20 text-gray-400 font-bold">Loading...</div>
+                ) : lessons.length === 0 ? (
                         <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-gray-100 p-12 sm:p-20 text-center">
                             <Calendar size={48} className="mx-auto mb-6 text-gray-300" />
                             <h2 className="text-xl sm:text-2xl font-black text-gray-800 mb-4">No lessons yet</h2>
@@ -345,47 +299,7 @@ const DashboardPage = () => {
                             ))}
                         </div>
                     )
-                ) : (
-                    <div>
-                        {packages.length === 0 ? (
-                            <div className="bg-white rounded-2xl sm:rounded-3xl shadow-lg border border-gray-100 p-12 sm:p-20 text-center">
-                                <Package size={48} className="mx-auto mb-6 text-gray-300" />
-                                <h2 className="text-xl sm:text-2xl font-black text-gray-800 mb-4">No packages yet</h2>
-                                <p className="text-gray-500 max-w-sm mx-auto mb-8 font-medium text-sm sm:text-base">Purchase a lesson package to save with bulk pricing!</p>
-                                <Link to="/" className="px-8 sm:px-10 py-3 sm:py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition shadow-xl text-sm sm:text-base">
-                                    Browse Packages
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
-                                {packages.map((pkg) => (
-                                    <div key={pkg.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 sm:p-6">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <h3 className="font-black text-base sm:text-lg text-gray-900">{pkg.duration} min Package</h3>
-                                            <span className={`px-3 py-1 rounded-full text-xs font-black uppercase ${pkg.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
-                                                {pkg.status}
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-2xl sm:text-3xl font-black text-indigo-600">{pkg.remaining_lessons}<span className="text-base sm:text-lg text-gray-400">/{pkg.total_lessons}</span></p>
-                                                <p className="text-xs sm:text-sm text-gray-500 font-medium">lessons remaining</p>
-                                            </div>
-                                            {pkg.remaining_lessons > 0 && (
-                                                <Link
-                                                    to={`/book/${TEACHER_ID}?package=${pkg.id}`}
-                                                    className="px-4 sm:px-6 py-2 sm:py-3 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition text-xs sm:text-sm"
-                                                >
-                                                    Schedule Lesson
-                                                </Link>
-                                            )}
-                                        </div>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                }
 
                 {/* Rescheduling Modal */}
                 {reschedulingLesson && (

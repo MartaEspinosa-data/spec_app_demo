@@ -8,10 +8,10 @@ GOOGLE_MEET_LINK = "https://meet.google.com/pyv-dxwi-mxc"
 # SMTP Config — set these as env vars in production
 SMTP_HOST = os.getenv("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
-SMTP_USER = os.getenv("SMTP_USER", "")  # e.g. martaespinosagarcia@gmail.com
+SMTP_USER = os.getenv("SMTP_USER", "")  # e.g. your-email@gmail.com
 SMTP_PASS = os.getenv("SMTP_PASS", "")  # App password from Gmail
 SENDER_NAME = "Profe Marta"
-TEACHER_EMAIL = os.getenv("TEACHER_NOTIFICATION_EMAIL", SMTP_USER or "martaespinosagarcia@gmail.com")
+TEACHER_EMAIL = os.getenv("TEACHER_NOTIFICATION_EMAIL", "")
 
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:

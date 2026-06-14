@@ -1,10 +1,9 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams, useNavigate, useSearchParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { API_URL } from '../config';
 import { teacherService } from '../services/teacherService';
 import type { Teacher } from '../services/teacherService';
-import apiClient from '../services/apiClient';
 import { useToast } from '../components/Toast';
 import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
 import { DurationSelector } from '../components/calendar/DurationSelector';
@@ -14,12 +13,9 @@ import LanguageSelector from '../components/LanguageSelector';
 
 const BookingPage = () => {
     const { id } = useParams<{ id: string }>();
-    const [searchParams] = useSearchParams();
-    const packageId = searchParams.get('package');
     const navigate = useNavigate();
     const { addToast } = useToast();
     const [teacher, setTeacher] = useState<Teacher | null>(null);
-    const [packageInfo, setPackageInfo] = useState<any>(null);
     const [loading, setLoading] = useState(true);
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<number>(60);
@@ -36,7 +32,7 @@ const BookingPage = () => {
 
     // ── Fetch price when lesson_type or duration changes ──────────────────
     useEffect(() => {
-        if (!teacher || packageId) return;
+        if (!teacher) return;
         let cancelled = false;
         const fetchPrice = async () => {
             setPriceLoading(true);
@@ -57,7 +53,7 @@ const BookingPage = () => {
         };
         fetchPrice();
         return () => { cancelled = true; };
-    }, [formData.subject, selectedDuration, teacher?.id, packageId]);
+    }, [formData.subject, selectedDuration, teacher?.id]);
 
     useEffect(() => {
         const fetchTeacher = async () => {
@@ -71,26 +67,9 @@ const BookingPage = () => {
                 setLoading(false);
             }
         };
-        const fetchPackage = async () => {
-            if (!packageId) return;
-            try {
-                const studentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
-                if (!studentAuth) return;
-                const res = await apiClient.get(`/packages/student/${studentAuth.student_id}`);
-                const pkg = res.data.packages.find((p: any) => p.id === packageId);
-                if (pkg) {
-                    setPackageInfo(pkg);
-                    setSelectedDuration(pkg.duration);
-                    setFormData(prev => ({ ...prev, name: studentAuth.name, email: studentAuth.email }));
-                }
-            } catch (err) {
-                console.error('Error fetching package:', err);
-            }
-        };
 
         fetchTeacher();
-        fetchPackage();
-    }, [id, packageId]);
+    }, [id]);
 
     const handleBooking = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -98,18 +77,6 @@ const BookingPage = () => {
 
         setSubmitting(true);
         try {
-            if (packageId) {
-                await apiClient.post(`/packages/book-with-package`, {
-                    package_id: packageId,
-                    teacher_id: teacher.id,
-                    lesson_type: formData.subject,
-                    start_time: selectedSlot,
-                    student_timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-                });
-                navigate('/dashboard');
-                return;
-            }
-
             const response = await axios.post(`${API_URL}/lessons/`, {
                 student_name: formData.name,
                 student_email: formData.email,
@@ -175,9 +142,8 @@ const BookingPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-start">
                     {/* Left: Custom Calendar */}
                     <div className="lg:col-span-8">
-                        <DurationSelector 
+                        <DurationSelector
                             selected={selectedDuration}
-                            disabled={!!packageId}
                             onChange={(mins) => {
                                 setSelectedDuration(mins);
                                 setSelectedSlot(null);
@@ -208,7 +174,6 @@ const BookingPage = () => {
                                         placeholder={t('booking.form.namePlaceholder')}
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        disabled={!!packageId}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -220,7 +185,6 @@ const BookingPage = () => {
                                         placeholder={t('booking.form.emailPlaceholder')}
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        disabled={!!packageId}
                                     />
                                 </div>
                                 <div className="space-y-2">
@@ -239,22 +203,20 @@ const BookingPage = () => {
                                 </div>
 
                                 {/* Dynamic price display */}
-                                {!packageId && (
-                                    <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 text-center">
-                                        {priceLoading ? (
-                                            <span className="text-indigo-400 font-bold text-sm animate-pulse">Calculating price...</span>
-                                        ) : dynamicPrice !== null ? (
-                                            <div>
-                                                <span className="text-2xl sm:text-3xl font-black text-indigo-600">€{dynamicPrice.toFixed(2)}</span>
-                                                <p className="text-xs text-indigo-400 font-medium mt-1">
-                                                    {selectedDuration} min · {formData.subject}
-                                                </p>
-                                            </div>
-                                        ) : (
-                                            <span className="text-indigo-400 font-bold text-sm">—</span>
-                                        )}
-                                    </div>
-                                )}
+                                <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 text-center">
+                                    {priceLoading ? (
+                                        <span className="text-indigo-400 font-bold text-sm animate-pulse">Calculating price...</span>
+                                    ) : dynamicPrice !== null ? (
+                                        <div>
+                                            <span className="text-2xl sm:text-3xl font-black text-indigo-600">€{dynamicPrice.toFixed(2)}</span>
+                                            <p className="text-xs text-indigo-400 font-medium mt-1">
+                                                {selectedDuration} min · {formData.subject}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <span className="text-indigo-400 font-bold text-sm">—</span>
+                                    )}
+                                </div>
 
                                 <div className="pt-2 sm:pt-4">
                                     <button
@@ -266,11 +228,9 @@ const BookingPage = () => {
                                             }`}
                                     >
                                         {submitting ? t('booking.processing') : (
-                                            packageId
-                                                ? `Confirm Appointment (${packageInfo?.remaining_lessons} credits left)`
-                                                : (selectedSlot && dynamicPrice !== null
-                                                    ? `Pay €${dynamicPrice.toFixed(2)} · Confirm Booking`
-                                                    : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot')))
+                                            selectedSlot && dynamicPrice !== null
+                                                ? `Pay €${dynamicPrice.toFixed(2)} · Confirm Booking`
+                                                : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot'))
                                         )}
                                     </button>
                                 </div>

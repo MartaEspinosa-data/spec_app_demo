@@ -8,9 +8,10 @@ from collections import defaultdict
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api import teachers, lessons, availability, students, packages, webhooks
+from app.api import teachers, lessons, availability, students, webhooks
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.utils.reminders import check_reminders
+from app.utils.cleanup import expire_pending_lessons
 
 # Periodic tasks — global for lifespan access
 scheduler = BackgroundScheduler()
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle for the FastAPI application."""
     # Startup
     scheduler.add_job(check_reminders, 'interval', minutes=5)
+    scheduler.add_job(expire_pending_lessons, 'interval', minutes=5)
     scheduler.start()
     yield
     # Shutdown — graceful cleanup
@@ -34,7 +36,6 @@ app.include_router(teachers.router)
 app.include_router(lessons.router)
 app.include_router(availability.router)
 app.include_router(students.router)
-app.include_router(packages.router)
 app.include_router(webhooks.router)
 
 # Configure CORS

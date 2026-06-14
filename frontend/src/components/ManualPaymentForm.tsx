@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom';
 const GOOGLE_MEET_LINK = "https://meet.google.com/pyv-dxwi-mxc";
 
 interface PaymentSuccessInlineProps {
-    type: 'lesson' | 'package';
+    type: 'lesson';
     onNavigate?: () => void;
 }
 
@@ -12,8 +12,8 @@ export const PaymentSuccessInline = ({ type, onNavigate }: PaymentSuccessInlineP
     <div className="text-center py-8 space-y-6">
         <CheckCircle size={64} className="text-green-500 mx-auto animate-bounce" />
         <div>
-            <h3 className="text-2xl font-black text-gray-900 mb-2">{type === 'lesson' ? '¡Reserva Confirmada!' : '¡Paquete Adquirido!'}</h3>
-            <p className="text-gray-500 font-medium">{type === 'lesson' ? 'Your lesson has been booked successfully. You will receive a confirmation email shortly.' : 'Your 5-lesson package is ready to use.'}</p>
+            <h3 className="text-2xl font-black text-gray-900 mb-2">¡Reserva Confirmada!</h3>
+            <p className="text-gray-500 font-medium">Your lesson has been booked successfully. You will receive a confirmation email shortly.</p>
         </div>
 
         {type === 'lesson' ? (

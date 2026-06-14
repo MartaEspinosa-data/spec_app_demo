@@ -1,13 +1,11 @@
 import { Clock } from 'lucide-react';
 
-export const DurationSelector = ({ 
-  selected, 
+export const DurationSelector = ({
+  selected,
   onChange,
-  disabled = false
-}: { 
-  selected: number; 
+}: {
+  selected: number;
   onChange: (d: number) => void;
-  disabled?: boolean;
 }) => {
   const options = [30, 45, 60];
 
@@ -21,23 +19,17 @@ export const DurationSelector = ({
         {options.map((mins) => (
           <button
             key={mins}
-            disabled={disabled}
             onClick={() => onChange(mins)}
             className={`flex-1 py-3 rounded-2xl font-bold transition-all ${
-              selected === mins 
-                ? 'bg-indigo-600 text-white shadow-lg scale-[1.02]' 
+              selected === mins
+                ? 'bg-indigo-600 text-white shadow-lg scale-[1.02]'
                 : 'bg-gray-50 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600'
-            } ${disabled && selected !== mins ? 'opacity-30 cursor-not-allowed' : ''} ${disabled && selected === mins ? 'cursor-default' : ''}`}
+            }`}
           >
             {mins} min
           </button>
         ))}
       </div>
-      {disabled && (
-        <p className="text-xs text-indigo-500 font-bold mt-4 animate-pulse">
-          ✨ Duration is locked to your package credits.
-        </p>
-      )}
     </div>
   );
 };

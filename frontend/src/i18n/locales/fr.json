@@ -12,14 +12,6 @@
   "nav.getStarted": "Réserver une Leçon",
   "nav.teacherDashboard": "Tableau de Bord Enseignant",
 
-  "landing.packages.title": "Forfaits de Cours",
-  "landing.packages.was": "avant",
-  "landing.packages.30min.title": "Cours de 30 Min",
-  "landing.packages.30min.desc": "5 cours x 30 minutes — parfait pour une pratique rapide de la conversation. Économisez 3%!",
-  "landing.packages.45min.title": "Cours de 45 Min",
-  "landing.packages.45min.desc": "5 cours x 45 minutes — équilibre idéal entre profondeur et commodité. Économisez 3%!",
-  "landing.packages.60min.title": "Cours de 60 Min",
-  "landing.packages.60min.desc": "5 cours x 60 minutes — l'expérience immersive complète. Économisez 3%!",
 
   "landing.badge": "Améliorez Votre Espagnol",
   "landing.hero.title": "Apprenez l'Espagnol avec un ",
@@ -79,9 +71,12 @@
   "dashboard.browseTeachers": "Parcourir les Enseignants",
 
   "payment.success.title": "Réservation Confirmée !",
-  "payment.success.subtitle": "Votre cours est programmé ! Veuillez envoyer le paiement à martaespinosagarcia@gmail.com sur Payoneer avant le cours.",
+  "payment.success.subtitle": "Votre cours est programmé ! Veuillez envoyer le paiement sur Payoneer avant le cours.",
   "payment.success.dashboard": "Aller au Tableau de Bord",
   "payment.success.home": "Retour à l'Accueil",
+  "payment.success.verifying": "Confirmation de votre paiement...",
+  "payment.success.verifyingSubtitle": "Nous vérifions votre paiement dans nos registres. Cela ne prendra qu'un instant.",
+  "payment.success.verifyingTimeout": "Votre paiement a bien été effectué ! La confirmation du cours est en cours de traitement. Vous recevrez un email sous peu avec tous les détails.",
   "payment.cancelled.title": "Paiement Annulé",
   "payment.cancelled.subtitle": "Le processus de paiement n'a pas été finalisé. Ne vous inquiétez pas, vous pouvez réessayer quand vous le souhaitez.",
   "payment.cancelled.retry": "Réessayer",

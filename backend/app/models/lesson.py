@@ -1,4 +1,4 @@
-from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Float
+from sqlalchemy import Column, String, DateTime, ForeignKey, Integer, Float, func
 from sqlalchemy.orm import relationship
 from app.database.database import Base
 import uuid
@@ -18,6 +18,7 @@ class Lesson(Base):
     price = Column(Float, nullable=False)
     status = Column(String, default="pending")  # pending, scheduled, completed, cancelled
     student_timezone = Column(String, default="UTC", nullable=False)
+    created_at = Column(DateTime, server_default=func.now(), nullable=False)
     meeting_link = Column(String, nullable=True, default="https://meet.google.com/pyv-dxwi-mxc")
     
     # Pedagogical Feedback

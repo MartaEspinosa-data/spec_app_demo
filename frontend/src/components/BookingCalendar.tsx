@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
-import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, ChevronLeft, ChevronRight, Lock } from 'lucide-react';
 import axios from 'axios';
 import { API_URL } from '../config';
 // Note: slots endpoint is public (no auth required) so we use raw axios here
+
+const CUTOFF_HOURS = 12;
 
 interface Props {
     teacherId: string;
@@ -14,6 +16,10 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
     const [viewDate, setViewDate] = useState(new Date());
     const [availableSlots, setAvailableSlots] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
+
+    const cutoffTime = Date.now() + CUTOFF_HOURS * 60 * 60 * 1000;
+    const bookableSlots = availableSlots.filter(s => new Date(s).getTime() >= cutoffTime);
+    const greyedSlots = availableSlots.filter(s => new Date(s).getTime() < cutoffTime);
 
     const daysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
     const firstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
@@ -112,7 +118,8 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
                         </div>
                     ) : availableSlots.length > 0 ? (
                         <div className="flex flex-col gap-3">
-                            {availableSlots.map(slot => {
+                            {/* Bookable slots */}
+                            {bookableSlots.map(slot => {
                                 const timeStr = new Date(slot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
                                 const isSelected = selectedSlot === slot;
                                 return (
@@ -128,6 +135,39 @@ const BookingCalendar = ({ teacherId, onSlotSelect, selectedSlot }: Props) => {
                                     </button>
                                 );
                             })}
+
+                            {/* Greyed out (within 12h cutoff) */}
+                            {greyedSlots.length > 0 && (
+                                <>
+                                    <div className="flex items-center gap-1.5 text-amber-600 pt-2 pb-1">
+                                        <Lock size={12} />
+                                        <span className="text-xs font-medium">
+                                            Unavailable — must be booked at least {CUTOFF_HOURS}h in advance
+                                        </span>
+                                    </div>
+                                    {greyedSlots.map(slot => {
+                                        const timeStr = new Date(slot).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                                        return (
+                                            <button
+                                                key={slot}
+                                                disabled
+                                                className="w-full py-4 px-6 rounded-2xl font-bold bg-gray-100 border-2 border-gray-100 text-gray-400 cursor-not-allowed line-through decoration-gray-300"
+                                                title="Must be booked at least 12 hours in advance"
+                                            >
+                                                {timeStr}
+                                            </button>
+                                        );
+                                    })}
+                                </>
+                            )}
+
+                            {bookableSlots.length === 0 && greyedSlots.length > 0 && (
+                                <div className="text-center py-6 px-4 bg-amber-50 rounded-2xl border border-amber-100">
+                                    <p className="text-amber-700 font-medium text-sm">
+                                        All remaining slots today require at least {CUTOFF_HOURS}h advance booking. Please try a later date.
+                                    </p>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="text-center py-10 bg-gray-50 rounded-3xl border-2 border-dashed border-gray-200">

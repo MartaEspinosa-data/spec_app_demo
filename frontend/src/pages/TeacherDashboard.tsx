@@ -74,8 +74,11 @@ const TeacherDashboard = () => {
         setLoadingLessons(true);
         try {
             const res = await apiClient.get(`/lessons/teacher/${TEACHER_ID}`);
-            // Filter out completed lessons — they disappear once marked complete
-            const activeLessons = res.data.lessons.filter((l: LessonInfo) => l.status !== 'completed');
+            // Filter out completed lessons (they disappear once marked complete)
+            // AND pending lessons (unpaid — webhook auto-confirms them; teacher has no action to take)
+            const activeLessons = res.data.lessons.filter(
+                (l: LessonInfo) => l.status !== 'completed' && l.status !== 'pending'
+            );
             setLessons(activeLessons);
         } catch (err: any) {
             addToast('error', err?.response?.data?.detail || 'Failed to load lessons.');
@@ -353,7 +356,8 @@ const TeacherDashboard = () => {
                                                     onChange={(e) => updateStatus(lesson.id, e.target.value, lesson)}
                                                     className={`px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider border border-transparent shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all ${statusColor(lesson.status)}`}
                                                 >
-                                                    <option value="pending" className="bg-white text-gray-700">pending</option>
+                                                    {/* pending is intentionally absent — payment-backed lessons auto-confirm via Stripe webhook;
+                                                        the teacher only sees lessons that are already scheduled */}
                                                     <option value="scheduled" className="bg-white text-gray-700">scheduled</option>
                                                     <option value="completed" className="bg-white text-gray-700">completed</option>
                                                     <option value="cancelled" className="bg-white text-gray-700">cancelled</option>

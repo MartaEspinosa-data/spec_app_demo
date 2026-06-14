@@ -125,8 +125,8 @@ check("Public lesson creation works", r.status_code == 200, f"got {r.status_code
 # ---- 8. Teacher Login (no TEACHER_PASSWORD set) ----
 print("\n--- 8. Teacher Login ---")
 r = requests.post(f"{BASE}/teachers/login", json={
-    "email": "martaespinosagarcia@gmail.com",
-    "password": "4565"
+    "email": "teacher@example.com",
+    "password": "test-password-123"
 })
 # Should still fail since no TEACHER_PASSWORD in .env (or in memory due to cached env)
 if r.status_code == 200:

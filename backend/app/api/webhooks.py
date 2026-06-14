@@ -5,7 +5,6 @@ from sqlalchemy.orm import Session
 
 from app.database import database
 from app.models import lesson as lesson_models
-from app.models import package as package_models
 from app.models import student as student_models
 from app.utils.stripe import construct_webhook_event, is_stripe_configured
 
@@ -29,8 +28,8 @@ async def stripe_webhook(request: Request, db: Session = Depends(database.get_db
     Stripe webhook endpoint.
 
     Listens for:
-      - checkout.session.completed  → payment successful, activate the lesson/package
-      - checkout.session.expired    → payment abandoned, keep lesson/package pending
+      - checkout.session.completed  → payment successful, activate the lesson
+      - checkout.session.expired    → payment abandoned, keep lesson pending
 
     Stripe sends the raw body and a Stripe-Signature header that we verify
     using the webhook signing secret.
@@ -53,17 +52,11 @@ async def stripe_webhook(request: Request, db: Session = Depends(database.get_db
 
     # ── Handle completed checkout ──────────────────────────────────────────
     if event_type == "checkout.session.completed":
-        if payment_type == "package":
-            _handle_package_checkout_completed(db, session_obj, metadata)
-        else:
-            _handle_lesson_checkout_completed(db, session_obj, metadata)
+        _handle_lesson_checkout_completed(db, session_obj, metadata)
 
     # ── Handle expired / abandoned checkout ────────────────────────────────
     elif event_type == "checkout.session.expired":
-        if payment_type == "package":
-            _handle_package_checkout_expired(db, session_obj)
-        else:
-            _handle_lesson_checkout_expired(db, session_obj)
+        _handle_lesson_checkout_expired(db, session_obj)
 
     else:
         print(f"[STRIPE WEBHOOK] Unhandled event type: {event_type}")
@@ -74,18 +67,32 @@ async def stripe_webhook(request: Request, db: Session = Depends(database.get_db
 # ── Lesson-specific checkout handlers ───────────────────────────────────────
 
 def _handle_lesson_checkout_completed(db: Session, session_obj: dict, metadata: dict):
-    """Handle completed checkout for a single lesson."""
+    """
+    Handle completed checkout for a single lesson.
+
+    DESIGN RULE: Payment-backed lessons (payment_method='stripe') are AUTO-CONFIRMED.
+    A successful Stripe payment is the only gate between pending→scheduled.
+    No manual teacher acceptance is required or expected for stripe-paid lessons.
+    The teacher only intervenes for non-stripe/manual lessons or edge cases.
+    """
     stripe_session_id = session_obj.get("id")
     booking_id = metadata.get("booking_id") if metadata else None
+    client_reference_id = session_obj.get("client_reference_id")
 
     lesson = None
-    # 1. Look up by booking_id in metadata (primary method)
+    # 1. Look up by booking_id in metadata (checkout-session approach)
     if booking_id:
         lesson = db.query(lesson_models.Lesson).filter(
             lesson_models.Lesson.id == booking_id
         ).first()
 
-    # 2. Fallback: look up by stripe_session_id
+    # 2. Look up by client_reference_id (Payment Link approach)
+    if not lesson and client_reference_id:
+        lesson = db.query(lesson_models.Lesson).filter(
+            lesson_models.Lesson.id == client_reference_id
+        ).first()
+
+    # 3. Fallback: look up by stripe_session_id
     if not lesson and stripe_session_id:
         lesson = db.query(lesson_models.Lesson).filter(
             lesson_models.Lesson.stripe_session_id == stripe_session_id
@@ -93,12 +100,17 @@ def _handle_lesson_checkout_completed(db: Session, session_obj: dict, metadata: 
 
     if not lesson:
         print(f"[STRIPE WEBHOOK] No lesson found for session {stripe_session_id}. "
-              f"booking_id: {booking_id}, metadata: {metadata}")
+              f"booking_id: {booking_id}, client_reference_id: {client_reference_id}, metadata: {metadata}")
+        return
+
+    # Idempotency guard — only process if lesson is still pending
+    if lesson.status != "pending":
+        print(f"[STRIPE WEBHOOK] Lesson {lesson.id} already processed (status={lesson.status}). Skipping.")
         return
 
     lesson.stripe_session_id = stripe_session_id
     lesson.payment_method = "stripe"
-    lesson.status = "pending"  # still pending until teacher approves
+    lesson.status = "scheduled"  # payment confirmed — lesson is now scheduled
 
     db.commit()
     db.refresh(lesson)
@@ -131,48 +143,3 @@ def _handle_lesson_checkout_expired(db: Session, session_obj: dict):
             print(f"[STRIPE WEBHOOK] Checkout Session expired for lesson {lesson.id}. Keeping pending for manual fallback.")
 
 
-# ── Package-specific checkout handlers ──────────────────────────────────────
-
-def _handle_package_checkout_completed(db: Session, session_obj: dict, metadata: dict):
-    """Handle completed checkout for a lesson package purchase."""
-    stripe_session_id = session_obj.get("id")
-    package_id = metadata.get("package_id") if metadata else None
-
-    pkg = None
-    # 1. Look up by package_id in metadata (primary method)
-    if package_id:
-        pkg = db.query(package_models.StudentPackage).filter(
-            package_models.StudentPackage.id == package_id
-        ).first()
-
-    # 2. Fallback: look up by stripe_session_id
-    if not pkg and stripe_session_id:
-        pkg = db.query(package_models.StudentPackage).filter(
-            package_models.StudentPackage.stripe_session_id == stripe_session_id
-        ).first()
-
-    if not pkg:
-        print(f"[STRIPE WEBHOOK] No package found for session {stripe_session_id}. "
-              f"package_id: {package_id}, metadata: {metadata}")
-        return
-
-    pkg.stripe_session_id = stripe_session_id
-    pkg.payment_method = "stripe"
-    pkg.status = "active"
-
-    db.commit()
-    db.refresh(pkg)
-
-    print(f"[STRIPE WEBHOOK] Package {pkg.id} payment confirmed via Stripe. "
-          f"Status: {pkg.status}, Credits: {pkg.remaining_lessons}")
-
-
-def _handle_package_checkout_expired(db: Session, session_obj: dict):
-    """Handle expired checkout for a lesson package."""
-    stripe_session_id = session_obj.get("id")
-    if stripe_session_id:
-        pkg = db.query(package_models.StudentPackage).filter(
-            package_models.StudentPackage.stripe_session_id == stripe_session_id
-        ).first()
-        if pkg and pkg.status != "active" and pkg.stripe_session_id == stripe_session_id:
-            print(f"[STRIPE WEBHOOK] Checkout Session expired for package {pkg.id}. Keeping pending for manual fallback.")
