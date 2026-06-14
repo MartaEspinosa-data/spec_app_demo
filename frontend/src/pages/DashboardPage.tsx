@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, BookOpen, Clock, DollarSign, LogOut, Home, User, Play, Menu, X, XCircle } from 'lucide-react';
+import { Calendar, BookOpen, Clock, DollarSign, LogOut, Home, User, Play, Menu, X, XCircle, Trash2 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { useToast } from '../components/Toast';
 import LanguageSelector from '../components/LanguageSelector';
@@ -79,6 +79,32 @@ const DashboardPage = () => {
             await fetchLessons();
         } catch (err: any) {
             addToast('error', err?.response?.data?.detail || t('lesson.cancelError'));
+        }
+    };
+
+    const handleCleanAll = async () => {
+        const cancelledCount = lessons.filter(l => l.status === 'cancelled').length;
+        const completedCount = lessons.filter(l => l.status === 'completed').length;
+        const total = cancelledCount + completedCount;
+
+        if (total === 0) {
+            addToast('info', t('lesson.cleanNone'));
+            return;
+        }
+
+        const message = t('lesson.cleanPrompt')
+            .replace('{count}', String(total))
+            .replace('{cancelled}', String(cancelledCount))
+            .replace('{completed}', String(completedCount));
+
+        if (!window.confirm(message)) return;
+
+        try {
+            const res = await apiClient.delete(`/students/${studentAuth.student_id}/lessons/clean`);
+            addToast('success', t('lesson.cleanSuccess').replace('{count}', String(res.data.deleted_count)));
+            await fetchLessons();
+        } catch (err: any) {
+            addToast('error', err?.response?.data?.detail || t('lesson.cleanError'));
         }
     };
 
@@ -167,6 +193,19 @@ const DashboardPage = () => {
                         View all your booked and completed lessons.
                     </p>
                 </header>
+
+                {/* Clean All Button */}
+                {!loading && lessons.length > 0 && (
+                    <div className="mb-6 flex justify-end">
+                        <button
+                            onClick={handleCleanAll}
+                            className="px-5 py-2.5 bg-red-50 text-red-600 font-bold rounded-xl hover:bg-red-100 transition flex items-center gap-2 text-xs sm:text-sm border border-red-100"
+                        >
+                            <Trash2 size={14} />
+                            {t('lesson.cleanButton')}
+                        </button>
+                    </div>
+                )}
 
                 {loading ? (
                     <div className="text-center py-20 text-gray-400 font-bold">Loading...</div>

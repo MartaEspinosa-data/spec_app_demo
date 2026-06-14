@@ -146,6 +146,10 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
     """
     Send a password reset email to the teacher.
     Always returns 200 to prevent email enumeration.
+
+    Idempotent: if a valid (non-expired) token already exists, re-send the same
+    link instead of generating a new one. This prevents double-click issues
+    where the second request overwrites the token before the first link is used.
     """
     teacher_email = os.getenv("TEACHER_EMAIL", "")
 
@@ -161,16 +165,29 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
             "message": "If an account with that email exists, a password reset link has been sent."
         }
 
-    # Generate a secure reset token valid for 1 hour
+    # Reuse existing token if it's still valid (prevents double-click overwrite)
+    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    if (
+        teacher.reset_token is not None
+        and teacher.reset_token_expiry is not None
+        and teacher.reset_token_expiry > now_utc_naive
+    ):
+        # Token still valid — re-send the same link
+        reset_url = f"{FRONTEND_URL}/teacher/reset-password?token={teacher.reset_token}"
+        send_password_reset_email(teacher_email, teacher.name, reset_url, role="teacher")
+        return {
+            "message": "If an account with that email exists, a password reset link has been sent."
+        }
+
+    # Generate a fresh token (old one expired or never existed)
     # NOTE: Store naive UTC datetime because SQLite strips timezone info.
     reset_token = secrets.token_urlsafe(32)
     teacher.reset_token = reset_token
-    teacher.reset_token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+    teacher.reset_token_expiry = now_utc_naive + timedelta(hours=1)
     db.commit()
 
     reset_url = f"{FRONTEND_URL}/teacher/reset-password?token={reset_token}"
-    send_password_reset_email(teacher.email if hasattr(teacher, 'email') else teacher_email,
-                              teacher.name, reset_url, role="teacher")
+    send_password_reset_email(teacher_email, teacher.name, reset_url, role="teacher")
 
     return {
         "message": "If an account with that email exists, a password reset link has been sent."

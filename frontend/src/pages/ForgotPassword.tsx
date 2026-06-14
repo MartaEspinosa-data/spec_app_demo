@@ -162,10 +162,10 @@ const ForgotPassword = ({ role }: ForgotPasswordProps) => {
 
                             <button
                                 type="submit"
-                                disabled={loading}
+                                disabled={loading || success !== ''}
                                 className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all active:scale-95 mt-2 disabled:opacity-50"
                             >
-                                {loading ? 'Sending...' : 'Send Reset Link'}
+                                {loading ? 'Sending...' : success ? 'Sent!' : 'Send Reset Link'}
                             </button>
 
                             <Link

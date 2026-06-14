@@ -12,6 +12,7 @@
     "landing.about.desc1": "Estoy emocionada de compartir mi pasión por el idioma y la cultura con ustedes.",
     "landing.about.desc2": "Ya sea que estés empezando o busques fluidez, transformemos tus objetivos de español en realidad. ¡Reserva una lección y emprendamos este increíble viaje juntos!",
     "landing.single.title": "Reserva una Clase",
+    "landing.contact": "¿Tienes preguntas? Contáctame en",
     "landing.single.subtitle": "Reserva una clase individual con total flexibilidad — elige la duración y el horario que mejor te convenga.",
     "landing.single.30min.title": "30 Min Suelta",
     "landing.single.30min.desc": "Una sesión de 30 minutos — perfecta para probar o practicar conversación rápida.",
@@ -82,5 +83,10 @@
     "calendar.noSlots": "No hay horarios disponibles en esta fecha. Es posible que la profesora no haya configurado su disponibilidad o que todos los horarios estén reservados.",
     "calendar.noSlotsShort": "No hay horarios disponibles en esta fecha.",
     "calendar.selectDatePrompt": "Selecciona una fecha arriba para ver los horarios disponibles",
-    "calendar.loadError": "No se pudieron cargar los horarios. Por favor, inténtalo de nuevo más tarde."
+    "calendar.loadError": "No se pudieron cargar los horarios. Por favor, inténtalo de nuevo más tarde.",
+    "lesson.cleanButton": "Limpiar Todo",
+    "lesson.cleanPrompt": "Esto eliminará permanentemente {count} clase(s) — {cancelled} canceladas y {completed} completadas. Esta acción no se puede deshacer. ¿Continuar?",
+    "lesson.cleanSuccess": "{count} clase(s) han sido eliminadas permanentemente.",
+    "lesson.cleanError": "No se pudieron limpiar las clases. Por favor, inténtalo de nuevo.",
+    "lesson.cleanNone": "No hay clases canceladas ni completadas para limpiar."
   }

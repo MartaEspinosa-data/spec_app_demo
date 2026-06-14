@@ -12,6 +12,7 @@
   "landing.about.desc1": "I am thrilled to share my passion for the Spanish language and culture with you.",
   "landing.about.desc2": "Whether you're just starting out or aiming for fluency, let's transform your Spanish goals into reality. Book a lesson, and let's embark on this incredible journey together!",
   "landing.single.title": "Book a Lesson",
+  "landing.contact": "Questions? Contact me at",
   "landing.single.subtitle": "Book an individual lesson with full flexibility — choose your duration and schedule that works best for you.",
   "landing.single.30min.title": "30 Min Single",
   "landing.single.30min.desc": "One 30-minute session — perfect to try it out or practice a quick conversation.",
@@ -82,5 +83,10 @@
   "calendar.noSlots": "No available slots on this date. The teacher may not have set their availability or all slots may be booked.",
   "calendar.noSlotsShort": "No available slots on this date.",
   "calendar.selectDatePrompt": "Select a date above to see available times",
-  "calendar.loadError": "Could not load available times. Please try again later."
+  "calendar.loadError": "Could not load available times. Please try again later.",
+  "lesson.cleanButton": "Clean All",
+  "lesson.cleanPrompt": "This will permanently delete {count} lesson(s) — {cancelled} cancelled and {completed} completed. This action cannot be undone. Continue?",
+  "lesson.cleanSuccess": "{count} lesson(s) have been permanently removed.",
+  "lesson.cleanError": "Failed to clean lessons. Please try again.",
+  "lesson.cleanNone": "There are no cancelled or completed lessons to clean."
 }

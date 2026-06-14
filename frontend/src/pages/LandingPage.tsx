@@ -450,18 +450,26 @@ const LandingPage = () => {
                 <ReviewsCarousel />
 
                 {/* Footer */}
-                <footer className="max-w-7xl mx-auto pt-16 sm:pt-20 pb-10 border-t border-gray-100 flex flex-col md:flex-row justify-between items-center gap-6 sm:gap-8 px-4">
-                    <div className="flex items-center gap-3 text-xl sm:text-2xl font-black text-gray-900">
-                        <MessageCircleQuestion size={28} className="text-indigo-600" />
-                        {t('nav.brand')}
-                    </div>
-                    
-                    <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-8">
-                        <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-gray-400">
-                            <Link to="/legal" className="hover:text-indigo-600 transition">Aviso Legal</Link>
-                            <Link to="/privacy" className="hover:text-indigo-600 transition">Privacidad</Link>
-                            <Link to="/cookies" className="hover:text-indigo-600 transition">Cookies</Link>
+                <footer className="max-w-7xl mx-auto pt-16 sm:pt-20 pb-10 border-t border-gray-100 flex flex-col gap-6 sm:gap-8 px-4">
+                    <div className="flex flex-col md:flex-row justify-between items-center gap-6 sm:gap-8">
+                        <div className="flex items-center gap-3 text-xl sm:text-2xl font-black text-gray-900">
+                            <MessageCircleQuestion size={28} className="text-indigo-600" />
+                            {t('nav.brand')}
                         </div>
+                        
+                        <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-8">
+                            <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-gray-400">
+                                <Link to="/legal" className="hover:text-indigo-600 transition">Aviso Legal</Link>
+                                <Link to="/privacy" className="hover:text-indigo-600 transition">Privacidad</Link>
+                                <Link to="/cookies" className="hover:text-indigo-600 transition">Cookies</Link>
+                            </div>
+                        </div>
+                    </div>
+                    <div className="text-center text-sm text-gray-500 font-medium">
+                        {t('landing.contact')}{' '}
+                        <a href="mailto:martaespinosagarcia@gmail.com" className="text-indigo-600 font-bold hover:underline transition">
+                            martaespinosagarcia@gmail.com
+                        </a>
                     </div>
                 </footer>
             </main>

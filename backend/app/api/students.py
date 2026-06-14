@@ -165,6 +165,10 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
 
     Note: Allows reset for students without a password_hash (e.g., Google login
     or legacy booking accounts) — the reset link lets them set a password.
+
+    Idempotent: if a valid (non-expired) token already exists, re-send the same
+    link instead of generating a new one. This prevents double-click issues
+    where the second request overwrites the token before the first link is used.
     """
     student = db.query(Student).filter(Student.email == data.email).first()
 
@@ -174,12 +178,25 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
             "message": "If an account with that email exists, a password reset link has been sent."
         }
 
-    # Generate a secure reset token valid for 1 hour
+    # Reuse existing token if it's still valid (prevents double-click overwrite)
+    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    if (
+        student.reset_token is not None
+        and student.reset_token_expiry is not None
+        and student.reset_token_expiry > now_utc_naive
+    ):
+        # Token still valid — re-send the same link
+        reset_url = f"{FRONTEND_URL}/student/reset-password?token={student.reset_token}"
+        send_password_reset_email(student.email, student.name, reset_url, role="student")
+        return {
+            "message": "If an account with that email exists, a password reset link has been sent."
+        }
+
+    # Generate a fresh token (old one expired or never existed)
     # NOTE: Store naive UTC datetime because SQLite strips timezone info.
-    # Use .replace(tzinfo=None) so the comparison in reset_password works.
     reset_token = secrets.token_urlsafe(32)
     student.reset_token = reset_token
-    student.reset_token_expiry = datetime.now(timezone.utc).replace(tzinfo=None) + timedelta(hours=1)
+    student.reset_token_expiry = now_utc_naive + timedelta(hours=1)
     db.commit()
 
     reset_url = f"{FRONTEND_URL}/student/reset-password?token={reset_token}"
@@ -265,3 +282,26 @@ def get_student_lessons(
             "feedback_materials": l.feedback_materials,
         })
     return {"lessons": result}
+
+
+@router.delete("/{student_id}/lessons/clean")
+def clean_student_lessons(
+    student_id: str,
+    user: Dict[str, Any] = Depends(require_student),
+    db: Session = Depends(get_db),
+):
+    """Delete all cancelled and completed lessons for the authenticated student."""
+    if user["sub"] != student_id:
+        raise HTTPException(status_code=403, detail="You can only clean your own lessons.")
+
+    deleted_count = db.query(Lesson).filter(
+        Lesson.student_id == student_id,
+        Lesson.status.in_(["cancelled", "completed"])
+    ).delete(synchronize_session='fetch')
+    db.commit()
+
+    return {
+        "status": "success",
+        "message": f"{deleted_count} cancelled and/or completed lesson(s) have been permanently removed.",
+        "deleted_count": deleted_count,
+    }
