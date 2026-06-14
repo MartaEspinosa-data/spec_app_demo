@@ -1,6 +1,11 @@
 # ── Stage 1: Build frontend ──────────────────────────────────────────────
 FROM node:20-alpine AS frontend-builder
 
+ARG VITE_API_URL=/api/v1
+ARG VITE_GOOGLE_CLIENT_ID
+ENV VITE_API_URL=$VITE_API_URL
+ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
+
 WORKDIR /app/frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
