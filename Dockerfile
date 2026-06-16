@@ -1,32 +1,20 @@
-# ── Stage 1: Build frontend ──────────────────────────────────────────────
 FROM node:20-alpine AS frontend-builder
-
-ARG VITE_API_URL=/api/v1
-ARG VITE_GOOGLE_CLIENT_ID=659601697211-0omrh7orp85fm8g5v4r7frk6sst5jp99.apps.googleusercontent.com
-ENV VITE_API_URL=$VITE_API_URL
-ENV VITE_GOOGLE_CLIENT_ID=$VITE_GOOGLE_CLIENT_ID
-
-WORKDIR /app/frontend
+WORKDIR /frontend
 COPY frontend/package.json frontend/package-lock.json ./
 RUN npm ci
-COPY frontend/ ./
+COPY frontend/ .
 RUN npm run build
 
-# ── Stage 2: Backend + serve frontend static files ────────────────────────
 FROM python:3.12-slim
 
 WORKDIR /app
 
-# Install backend dependencies
 COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy backend code
-COPY backend/ ./
+COPY backend/ .
 
-# Copy built frontend into static directory
-COPY --from=frontend-builder /app/frontend/dist ./frontend_dist
+COPY --from=frontend-builder /frontend/dist /app/frontend_dist
 
-# Run Alembic migrations on startup, then start the server
-CMD ["sh", "-c", "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"]
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
 EXPOSE 8000
