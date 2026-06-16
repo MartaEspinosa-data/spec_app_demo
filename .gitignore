@@ -16,6 +16,10 @@ venv/
 .mypy_cache/
 *.db
 
+# Secrets & credentials
+*coolify-setup*
+*-handoff*
+
 # Universal
 .DS_Store
 Thumbs.db
