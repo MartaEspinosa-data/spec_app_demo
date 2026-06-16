@@ -3,13 +3,11 @@ load_dotenv()
 
 import time
 import os
-from pathlib import Path
 from contextlib import asynccontextmanager
 from collections import defaultdict
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse, FileResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from app.api import teachers, lessons, availability, students, webhooks
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.utils.reminders import check_reminders
@@ -67,9 +65,8 @@ app.add_middleware(
 )
 
 # ── Serve frontend static files (when bundled in Docker) ────────────────────
-_FRONTEND_DIST = Path("/app/frontend_dist")
-if _FRONTEND_DIST.is_dir():
-    app.mount("/assets", StaticFiles(directory=_FRONTEND_DIST / "assets"), name="frontend-assets")
+# In separate-container mode, Nginx serves the frontend.
+# The SPA fallback below only activates when frontend files are present.
 
 
 # ── Request Logging Middleware ────────────────────────────────────────────────
@@ -150,13 +147,16 @@ def health_check():
 
 
 # ── SPA fallback: serve index.html for any non-API route ────────────────────
+# Only activates when running in combined mode (frontend files bundled in container)
+from pathlib import Path
+from fastapi.responses import FileResponse
+
+_FRONTEND_DIST = Path("/app/frontend_dist")
 _INDEX_HTML = _FRONTEND_DIST / "index.html"
 
 
 @app.get("/{full_path:path}")
 async def serve_spa(request: Request, full_path: str):
-    """Serve the React SPA. API routes are handled by routers above;
-    everything else falls through to index.html for client-side routing."""
     if _FRONTEND_DIST.is_dir() and _INDEX_HTML.exists():
         candidate = _FRONTEND_DIST / full_path
         if candidate.is_file():

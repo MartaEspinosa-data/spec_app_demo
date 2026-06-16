@@ -2,33 +2,17 @@
 .git/
 .gitignore
 
-# Python
-backend/.venv/
-backend/__pycache__/
-backend/**/__pycache__/
-backend/*.db
-backend/*.pyc
-backend/.env
-
-# Node
-frontend/node_modules/
-frontend/.vite/
-frontend/dist/
-frontend/.env
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-
-# Docs/specs (not needed in image)
-docs/
-specs/
+# Agent/config dirs
 .agent/
 .agents/
 .gemini/
 .specify/
+.kilo/
+
+# Docs & specs (not needed in image)
+docs/
+specs/
+*.md
 
 # Test files
 test_*.py
@@ -37,6 +21,7 @@ setup_test.py
 # OS files
 .DS_Store
 Thumbs.db
-
-# Venv at root
-.venv/
+*.tmp
+*.swp
+.vscode/
+.idea/
