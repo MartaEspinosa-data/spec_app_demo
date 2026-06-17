@@ -14,7 +14,7 @@ const ForgotPassword = ({ role }: ForgotPasswordProps) => {
     const isReset = !!initialToken; // If token is in URL, we're resetting
 
     const [email, setEmail] = useState('');
-    const [token, setToken] = useState(initialToken);
+    const [token] = useState(initialToken);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);

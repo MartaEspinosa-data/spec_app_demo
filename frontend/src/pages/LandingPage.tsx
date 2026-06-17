@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Sparkles, Calendar, Zap, MessageCircleQuestion, CheckCircle2, Play, Info, Menu, X } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL, TEACHER_ID } from '../config';
 import { useLanguage } from '../i18n';
@@ -11,7 +11,6 @@ import { DurationSelector } from '../components/calendar/DurationSelector';
 import { ReviewsCarousel } from '../components/ReviewsCarousel';
 
 const LandingPage = () => {
-    const navigate = useNavigate();
     const { t } = useLanguage();
     const { addToast } = useToast();
     const [showVideo, setShowVideo] = useState(false);

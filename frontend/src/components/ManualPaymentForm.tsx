@@ -1,5 +1,4 @@
 import { CheckCircle, Sparkles } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
 
 const GOOGLE_MEET_LINK = "https://meet.google.com/pyv-dxwi-mxc";
 
