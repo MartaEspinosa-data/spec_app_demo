@@ -111,7 +111,7 @@ and in the Coolify dashboard at runtime.
 |-----|-----------|------------|
 | `DATABASE_URL` | `postgresql://marta:<pwd>@<db-host>:5432/marta_spanish_dev` | `postgresql://marta:<pwd>@<db-host>:5432/marta_spanish_prod` |
 | `JWT_SECRET` | random secret | random secret |
-| `FRONTEND_URL` | `http://<frontend-dev-uuid>.94.130.57.41.sslip.io` | `http://<frontend-prod-uuid>.94.130.57.41.sslip.io` |
+| `FRONTEND_URL` | `https://dev.martaspanishteacher.com` | `https://martaspanishteacher.com` |
 | `SMTP_HOST` | `smtp.gmail.com` | `smtp.gmail.com` |
 | `SMTP_PORT` | `587` | `587` |
 | `STRIPE_SECRET_KEY` | Stripe secret key | Stripe secret key |
@@ -124,9 +124,9 @@ and in the Coolify dashboard at runtime.
 | `VITE_API_URL` | `/api/v1` |
 | `VITE_GOOGLE_CLIENT_ID` | Google OAuth client ID |
 | `VITE_STRIPE_PUBLISHABLE_KEY` | Stripe publishable key |
-| `BACKEND_URL` | `http://<backend-uuid>.94.130.57.41.sslip.io` |
+| `BACKEND_URL` | `https://api.dev.martaspanishteacher.com` (dev) / `https://api.martaspanishteacher.com` (prod) |
 
-> **Important**: `BACKEND_URL` must be the **external sslip.io URL** of the backend, NOT the Docker internal hostname. Nginx resolves hostnames at startup and cannot resolve Docker container UUIDs.
+> **Important**: `BACKEND_URL` must be the **external domain** of the backend (e.g. `https://api.martaspanishteacher.com`), NOT the Docker internal hostname. Nginx resolves hostnames at startup and cannot resolve Docker container UUIDs.
 
 ---
 
@@ -296,7 +296,7 @@ The `${BACKEND_URL}` placeholder is substituted at container startup by Nginx's 
 ### 5. Nginx DNS Resolution
 **Error**: `host not found in upstream "u0g4c4wocc4cc0kgss4g40o0"`
 
-**Fix**: Nginx resolves upstream hostnames at **startup**. Docker container UUIDs are not resolvable by nginx. Use the **external sslip.io URL** of the backend instead.
+**Fix**: Nginx resolves upstream hostnames at **startup**. Docker container UUIDs are not resolvable by nginx. Use the **external domain** of the backend instead.
 
 ### 6. Alembic Migration Chain
 **Error**: `KeyError: '003'` — migration `004` references a non-existent revision `003`.
