@@ -162,6 +162,114 @@ spec_app_demo/
 
 ---
 
+## URLs & Domains
+
+### Current URLs
+
+| Environment | App | URL |
+|------------|-----|-----|
+| **Production** | Frontend | `https://martaspanishteacher.com` `https://www.martaspanishteacher.com` |
+| **Production** | Backend API | `https://api.martaspanishteacher.com` |
+| **Development** | Frontend | `https://dev.martaspanishteacher.com` |
+| **Development** | Backend API | `https://api.dev.martaspanishteacher.com` |
+
+> **SSL**: Traefik auto-provisions Let's Encrypt certificates for all domains. After any domain change,
+> SSL certs take 5-15 minutes to issue. The site will show "not secure" during this window — it
+> resolves automatically.
+
+### Coolify App UUIDs
+
+| App | UUID |
+|-----|------|
+| `marta-backend-prod` | `u0g4c4wocc4cc0kgss4g40o0` |
+| `marta-frontend-prod` | `j0co8cgwso444ws8gcgk8kco` |
+| `marta-backend-dev` | `z400ock4ow004oko4gww0cog` |
+| `marta-frontend-dev` | `jg4ws44gw08gg4k0wcw8kk0c` |
+
+### Legacy sslip.io URLs (still functional)
+
+| App | URL |
+|-----|-----|
+| Prod Frontend | `http://j0co8cgwso444ws8gcgk8kco.94.130.57.41.sslip.io` |
+| Prod Backend | `http://u0g4c4wocc4cc0kgss4g40o0.94.130.57.41.sslip.io` |
+| Dev Frontend | `http://jg4ws44gw08gg4k0wcw8kk0c.94.130.57.41.sslip.io` |
+| Dev Backend | `http://z400ock4ow004oko4gww0cog.94.130.57.41.sslip.io` |
+
+### How to Change Domain
+
+Changing the domain involves 3 steps: **DNS → Coolify FQDNs → Env Vars → Redeploy**.
+
+#### Step 1: Update Cloudflare DNS
+
+```powershell
+$token = Get-Content .cloudflare-token
+$headers = @{ "Authorization" = "Bearer $token"; "Content-Type" = "application/json" }
+$zone = "00e168c6560ec485d07504ba3af4bd6b"  # martaspanishteacher.com zone
+
+# Example: add new A records
+$records = @(
+    @{ name = "mynewsubdomain"; type = "A"; content = "94.130.57.41"; ttl = 1 }
+)
+foreach ($r in $records) {
+    $body = $r | ConvertTo-Json
+    Invoke-RestMethod -Uri "https://api.cloudflare.com/client/v4/zones/$zone/dns_records" `
+        -Method Post -Headers $headers -Body $body -ContentType "application/json"
+}
+```
+
+#### Step 2: Update Coolify App FQDNs
+
+Use the Coolify API (field is `domains`, NOT `fqdn`):
+
+```powershell
+$headers = @{
+    "Authorization" = "Bearer <coolify-api-token>"
+    "Content-Type"  = "application/json"
+}
+$api = "http://94.130.57.41:8000/api/v1/applications"
+
+# Example: update frontend-prod domain
+$body = @{
+    domains = "https://newdomain.com,https://www.newdomain.com"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "$api/j0co8cgwso444ws8gcgk8kco" `
+    -Method Patch -Headers $headers -Body $body -ContentType "application/json"
+```
+
+> **Note**: URLs in `domains` field MUST include the `https://` prefix. Use
+> `force_domain_override=true` if domains conflict with existing resources.
+
+#### Step 3: Update Env Vars
+
+Update `FRONTEND_URL` (backend apps) and `BACKEND_URL` (frontend apps) to match the new domains.
+Since PATCH on env vars is broken in Coolify v4.0.0-beta.463, use delete + create:
+
+```powershell
+# List env vars to find the UUID
+$envs = Invoke-RestMethod -Uri "$api/<app-uuid>/envs" -Method Get -Headers $headers
+
+# Delete old env var
+Invoke-RestMethod -Uri "$api/<app-uuid>/envs/<env-uuid>" -Method Delete -Headers $headers
+
+# Create new env var with updated value
+$body = @{ key = "BACKEND_URL"; value = "https://api.newdomain.com" } | ConvertTo-Json
+Invoke-RestMethod -Uri "$api/<app-uuid>/envs" -Method Post -Headers $headers -Body $body -ContentType "application/json"
+```
+
+#### Step 4: Redeploy
+
+```powershell
+$body = @{ uuid = "<app-uuid>"; force = $true } | ConvertTo-Json
+Invoke-RestMethod -Uri "http://94.130.57.41:8000/api/v1/deploy" `
+    -Method Post -Headers $headers -Body $body -ContentType "application/json"
+```
+
+> **SSL wait**: After redeploy, Let's Encrypt takes 5-15 minutes to issue new SSL certificates.
+> The browser may show "not secure" during this time.
+
+---
+
 ## Dockerfiles
 
 ### Backend (`backend/Dockerfile`)
