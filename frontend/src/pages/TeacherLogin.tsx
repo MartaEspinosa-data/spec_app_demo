@@ -42,13 +42,27 @@ const TeacherLogin = () => {
                 body: JSON.stringify({ email: cleanEmail, password }),
             });
 
+            const isJson = (res.headers.get('content-type') || '').includes('application/json');
+
             if (!res.ok) {
-                const data = await res.json();
-                const msg = data.detail || 'Acceso denegado. Credenciales incorrectas.';
+                let msg: string;
+                if (isJson) {
+                    const data = await res.json();
+                    msg = typeof data.detail === 'string'
+                        ? data.detail
+                        : 'Acceso denegado. Credenciales incorrectas.';
+                } else {
+                    // Non-JSON error (e.g. 502 Bad Gateway from a proxy) => server unreachable
+                    msg = `El servidor no está disponible (${res.status}). Inténtalo de nuevo en unos segundos.`;
+                }
                 setError(msg);
                 addToast('error', msg);
                 setLoading(false);
                 return;
+            }
+
+            if (!isJson) {
+                throw new Error('Respuesta inesperada del servidor.');
             }
 
             const data = await res.json();
