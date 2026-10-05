@@ -13,8 +13,8 @@ if [ -n "$DATABASE_URL" ]; then
     done
 fi
 
-echo "Running migrations..."
-alembic upgrade head || echo "Migration skipped (no changes or DB unreachable)"
+echo "Bootstrapping database (tables, migrations, seed)..."
+python bootstrap_db.py || echo "WARNING: database bootstrap failed - see errors above"
 
 echo "Starting application..."
 exec "$@"
