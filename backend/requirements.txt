@@ -17,5 +17,6 @@ stripe>=13.0.0
 # Timezone data (IANA database for zoneinfo on Windows / slim Linux containers)
 tzdata>=2024.0
 
-# Database (for SQLite, included; for Postgres, add psycopg2-binary)
+# Database (for SQLite, included; for Postgres, add psycopg2-binary and psycopg)
 psycopg2-binary>=2.9.0
+psycopg[binary]>=3.1.0
