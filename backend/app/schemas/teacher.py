@@ -3,6 +3,7 @@ from typing import List, Optional
 
 class TeacherBase(BaseModel):
     name: str
+    email: Optional[str] = "martaespinosagarcia@gmail.com"
     bio: Optional[str] = None
     languages: List[str] = []
     price_per_hour: float

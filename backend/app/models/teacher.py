@@ -10,6 +10,7 @@ class Teacher(Base):
 
     id = Column(String, primary_key=True, default=generate_uuid)
     name = Column(String, nullable=False)
+    email = Column(String, nullable=True, index=True, default="martaespinosagarcia@gmail.com")
     bio = Column(Text)
     languages = Column(JSON, default=[])  # List of strings
     price_per_hour = Column(Float, nullable=False)
