@@ -69,8 +69,8 @@ def ensure_teacher() -> None:
             email=TEACHER_EMAIL,
             bio=MARTA_BIO,
             languages=["Spanish", "English", "French"],
-            price_per_hour=30.94,
-            pricing_schema={"30": 16.33, "45": 23.55, "60": 30.94},
+            price_per_hour=31.00,
+            pricing_schema={"30": 16.34, "45": 23.56, "60": 31.00},
             lessons_taught=558,
             # password_hash left empty: login falls back to TEACHER_PASSWORD env var
         ))

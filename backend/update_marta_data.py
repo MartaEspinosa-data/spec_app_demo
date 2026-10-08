@@ -43,10 +43,10 @@ Tengo muchos recursos como artículos, videos, juegos que pueden generar muchas 
         marta.pricing_schema = {
             "30": 16.34,
             "45": 23.56,
-            "60": 30.95
+            "60": 31.00
         }
         # Update base price_per_hour for legacy support if needed
-        marta.price_per_hour = 30.95
+        marta.price_per_hour = 31.00
         
         db.commit()
         print(f"Updated teacher {marta.name} with new bio and pricing schema.")

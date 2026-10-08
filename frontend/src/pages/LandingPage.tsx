@@ -107,8 +107,8 @@ const LandingPage = () => {
         scrollToBooking();
     };
 
-    // Base prices in EUR
-    const basePricesEUR = { 30: 16.34, 45: 23.56, 60: 30.95 };
+    // Base prices in EUR — must match the Stripe Payment Links
+    const basePricesEUR = { 30: 16.34, 45: 23.56, 60: 31.00 };
     const exchangeRates = { EUR: 1, USD: 1.09, GBP: 0.84, CZK: 25.0 };
     const currencySymbols = { EUR: '€', USD: '$', GBP: '£', CZK: 'Kč' };
     const rate = exchangeRates[currency];

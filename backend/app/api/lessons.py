@@ -23,12 +23,12 @@ MADRID_TZ = zoneinfo.ZoneInfo("Europe/Madrid")
 # If a lesson_type or duration is not found here, the teacher's pricing_schema
 # or hourly rate is used as fallback.
 LESSON_TYPE_PRICING: Dict[str, Dict[int, float]] = {
-    # Core types (most common)
-    "Conversación":    {30: 16.34, 45: 23.56, 60: 30.95},
-    "Conversacion":    {30: 16.34, 45: 23.56, 60: 30.95},
-    "Conversation":    {30: 16.34, 45: 23.56, 60: 30.95},
-    "Grammar":         {30: 16.34, 45: 23.56, 60: 30.95},
-    "Gramática":       {30: 16.34, 45: 23.56, 60: 30.95},
+    # Core types (most common) — must match the Stripe Payment Links
+    "Conversación":    {30: 16.34, 45: 23.56, 60: 31.00},
+    "Conversacion":    {30: 16.34, 45: 23.56, 60: 31.00},
+    "Conversation":    {30: 16.34, 45: 23.56, 60: 31.00},
+    "Grammar":         {30: 16.34, 45: 23.56, 60: 31.00},
+    "Gramática":       {30: 16.34, 45: 23.56, 60: 31.00},
 
     # Structured courses — higher price (curriculum preparation)
     "Curso Básico":    {30: 18.00, 45: 25.50, 60: 33.00},
@@ -44,7 +44,7 @@ def get_lesson_price(
     lesson_type: str,
     duration: int,
     teacher_pricing_schema: Optional[Dict[str, Any]] = None,
-    teacher_hourly_rate: float = 30.95,
+    teacher_hourly_rate: float = 31.00,
 ) -> float:
     """
     Determine the price for a lesson by checking, in order:
@@ -307,7 +307,7 @@ def lookup_lesson_price(
 
     # Gather teacher fallback data if a teacher_id was provided
     teacher_pricing_schema = None
-    teacher_hourly_rate = 30.95
+    teacher_hourly_rate = 31.00
     if teacher_id:
         teacher = db.query(teacher_models.Teacher).filter(teacher_models.Teacher.id == teacher_id).first()
         if teacher:
