@@ -214,7 +214,7 @@ const DashboardPage = () => {
                             <Calendar size={48} className="mx-auto mb-6 text-gray-300" />
                             <h2 className="text-xl sm:text-2xl font-black text-gray-800 mb-4">No lessons yet</h2>
                             <p className="text-gray-500 max-w-sm mx-auto mb-8 font-medium text-sm sm:text-base">Book your first lesson to get started on your Spanish journey!</p>
-                            <Link to="/" className="px-8 sm:px-10 py-3 sm:py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition shadow-xl text-sm sm:text-base">
+                            <Link to="/#book-a-lesson" className="px-8 sm:px-10 py-3 sm:py-4 bg-indigo-600 text-white font-bold rounded-2xl hover:bg-indigo-700 transition shadow-xl text-sm sm:text-base">
                                 Book a Lesson
                             </Link>
                         </div>

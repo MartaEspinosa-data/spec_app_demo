@@ -91,6 +91,16 @@ const LandingPage = () => {
         document.getElementById('book')?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // Scroll to a section when arriving with a URL hash (e.g. /#book-a-lesson)
+    useEffect(() => {
+        const hash = window.location.hash.slice(1);
+        if (!hash) return;
+        const timer = setTimeout(() => {
+            document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+        return () => clearTimeout(timer);
+    }, []);
+
     const handleSingleLessonClick = (duration: number) => {
         setSelectedDuration(duration);
         setSelectedSlot(null);
@@ -281,7 +291,7 @@ const LandingPage = () => {
                 </section>
 
                 {/* Book a Lesson Section */}
-                <section className="max-w-6xl mx-auto mb-20 sm:mb-32">
+                <section id="book-a-lesson" className="max-w-6xl mx-auto mb-20 sm:mb-32 scroll-mt-24">
                     <div className="text-center mb-10 sm:mb-16">
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.single.title')}</h2>
                         <div className="w-20 sm:w-24 h-1.5 bg-indigo-600 mx-auto rounded-full mb-4 sm:mb-6"></div>

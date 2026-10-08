@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
 from sqlalchemy.orm import Session
 from app.database.database import get_db
 from app.models.student import Student
@@ -10,7 +10,7 @@ from app.utils.auth import (
     get_current_user,
     require_student,
 )
-from app.utils.email import send_password_reset_email
+from app.utils.email import send_password_reset_email, send_student_welcome_email
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
@@ -39,7 +39,7 @@ class GoogleLoginRequest(BaseModel):
 
 
 @router.post("/register")
-def register_student(data: RegisterRequest, db: Session = Depends(get_db)):
+def register_student(data: RegisterRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     existing = db.query(Student).filter(Student.email == data.email).first()
     if existing:
         # If student exists but has no password (legacy from booking), set password
@@ -48,6 +48,7 @@ def register_student(data: RegisterRequest, db: Session = Depends(get_db)):
             existing.name = data.name
             db.commit()
             db.refresh(existing)
+            background_tasks.add_task(send_student_welcome_email, existing.email, existing.name)
             token = create_student_token(existing.id, existing.name, existing.email)
             return {
                 "student_id": existing.id,
@@ -66,6 +67,9 @@ def register_student(data: RegisterRequest, db: Session = Depends(get_db)):
     db.add(student)
     db.commit()
     db.refresh(student)
+
+    # Congratulate the student on their new account (non-blocking)
+    background_tasks.add_task(send_student_welcome_email, student.email, student.name)
 
     token = create_student_token(student.id, student.name, student.email)
     return {
@@ -113,7 +117,7 @@ def login_student(data: LoginRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/google-login")
-def google_login(data: GoogleLoginRequest, db: Session = Depends(get_db)):
+def google_login(data: GoogleLoginRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
     # In a production app, we would verify 'data.token' with google.oauth2.id_token
     # For now, we trust the frontend's verified data
 
@@ -129,6 +133,8 @@ def google_login(data: GoogleLoginRequest, db: Session = Depends(get_db)):
         db.add(student)
         db.commit()
         db.refresh(student)
+        # First-time Google sign-in creates an account — send welcome email
+        background_tasks.add_task(send_student_welcome_email, student.email, student.name)
     elif not student.google_id:
         # Link existing account to Google
         student.google_id = data.google_id

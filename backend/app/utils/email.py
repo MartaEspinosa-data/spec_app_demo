@@ -408,3 +408,52 @@ def send_password_reset_email(email: str, name: str, reset_url: str, role: str =
     """
 
     return _send_email(email, subject, html_body)
+
+
+# ---------------------------------------------------------------------------
+# Welcome Email (new student account)
+# ---------------------------------------------------------------------------
+
+def send_student_welcome_email(email: str, name: str):
+    """Congratulate a student on creating their account and invite them to book a lesson."""
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    subject = "🎉 ¡Bienvenido/a! Your account is ready — Spanish with Marta"
+
+    html_body = f"""
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8faff; border-radius: 24px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 40px 32px; text-align: center;">
+            <h1 style="color: white; font-size: 28px; margin: 0;">¡Enhorabuena! 🎉🇪🇸</h1>
+            <p style="color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 8px;">Your account has been created successfully</p>
+        </div>
+
+        <div style="padding: 32px;">
+            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{name}</strong>,</p>
+            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+                Congratulations — you now have an account with <strong>Spanish with Marta</strong>!
+                You can now book Spanish lessons, manage your upcoming classes and review your lesson feedback, all in one place.
+            </p>
+
+            <div style="background: white; border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
+                <p style="font-size: 14px; color: #9ca3af; font-weight: bold; margin: 0 0 12px 0;">WHAT YOU CAN DO NOW</p>
+                <p style="font-size: 16px; color: #1f2937; margin: 8px 0;">📅 Book your first Spanish lesson</p>
+                <p style="font-size: 16px; color: #1f2937; margin: 8px 0;">📹 Join your classes via Google Meet</p>
+                <p style="font-size: 16px; color: #1f2937; margin: 8px 0;">📝 Review vocabulary, corrections &amp; materials after each class</p>
+            </div>
+
+            <div style="text-align: center; margin: 32px 0;">
+                <a href="{frontend_url}"
+                   style="display: inline-block; background: #4f46e5; color: white; padding: 16px 40px;
+                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: bold;
+                          box-shadow: 0 4px 14px rgba(79,70,229,0.4);">
+                    📚 Book a Lesson
+                </a>
+            </div>
+
+            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                ¡Nos vemos pronto en clase! — Profe Marta ❤️
+            </p>
+        </div>
+    </div>
+    """
+
+    return _send_email(email, subject, html_body)
