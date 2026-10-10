@@ -61,8 +61,9 @@ def register_student(data: RegisterRequest, background_tasks: BackgroundTasks, d
 
     existing = db.query(Student).filter(Student.email == data.email).first()
     if existing:
-        # If student exists but has no password (legacy from booking), set password and require verification
-        if not existing.password_hash:
+        # If student exists but has no password (legacy from booking) or is not yet verified,
+        # update credentials and resend verification email
+        if not existing.password_hash or not existing.email_verified:
             existing.password_hash = hash_password(data.password)
             existing.name = data.name
             existing.email_verified = False
