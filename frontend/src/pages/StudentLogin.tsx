@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, BookOpen, RefreshCw } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, ArrowLeft, BookOpen, RefreshCw } from 'lucide-react';
 import { API_URL } from '../config';
 import { useToast } from '../components/Toast';
 import { GoogleLogin } from '@react-oauth/google';
@@ -132,6 +132,16 @@ const StudentLogin = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4 sm:p-6">
             <div className="w-full max-w-md">
+                <div className="mb-4 sm:mb-6">
+                    <Link
+                        to="/"
+                        className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 transition group"
+                    >
+                        <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
+                        <span>Back to main page</span>
+                    </Link>
+                </div>
+
                 <div className="text-center mb-6 sm:mb-10">
                     <Link to="/" className="inline-flex items-center gap-2 text-indigo-600 font-black text-xl sm:text-2xl tracking-tighter uppercase hover:text-indigo-700 transition">
                         <BookOpen size={24} />
@@ -187,6 +197,16 @@ const StudentLogin = () => {
                                 >
                                     Back to Sign In
                                 </button>
+
+                                <div className="pt-2 border-t border-gray-100">
+                                    <Link
+                                        to="/"
+                                        className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-gray-400 hover:text-indigo-600 transition group"
+                                    >
+                                        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                                        <span>Back to main page</span>
+                                    </Link>
+                                </div>
                             </div>
                         </div>
                     ) : (
@@ -307,6 +327,15 @@ const StudentLogin = () => {
                                         </Link>
                                     </div>
                                 )}
+                                <div className="pt-3 border-t border-gray-100">
+                                    <Link
+                                        to="/"
+                                        className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-gray-400 hover:text-indigo-600 transition group"
+                                    >
+                                        <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
+                                        <span>Back to main page</span>
+                                    </Link>
+                                </div>
                             </div>
                         </>
                     )}
