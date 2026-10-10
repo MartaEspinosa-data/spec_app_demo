@@ -15,6 +15,7 @@ import LegalNotice from './pages/LegalNotice';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import CookiePolicy from './pages/CookiePolicy';
 import ForgotPassword from './pages/ForgotPassword';
+import VerifyEmail from './pages/VerifyEmail';
 import { CookieBanner } from './components/CookieBanner';
 
 function App() {
@@ -31,6 +32,7 @@ function App() {
               <Route path="/booking/:id" element={<BookingPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/student/login" element={<StudentLogin />} />
+              <Route path="/student/verify-email" element={<VerifyEmail />} />
               <Route path="/student/forgot-password" element={<ForgotPassword role="student" />} />
               <Route path="/student/reset-password" element={<ForgotPassword role="student" />} />
               <Route path="/teacher/login" element={<TeacherLogin />} />

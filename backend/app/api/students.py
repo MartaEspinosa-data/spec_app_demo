@@ -10,7 +10,11 @@ from app.utils.auth import (
     get_current_user,
     require_student,
 )
-from app.utils.email import send_password_reset_email, send_student_welcome_email
+from app.utils.email import (
+    send_password_reset_email,
+    send_student_welcome_email,
+    send_student_verification_email,
+)
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
 from datetime import datetime, timedelta, timezone
@@ -38,24 +42,45 @@ class GoogleLoginRequest(BaseModel):
     google_id: str
 
 
+class VerifyEmailRequest(BaseModel):
+    token: str
+
+
+class ResendVerificationRequest(BaseModel):
+    email: EmailStr
+
+
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
+
+
 @router.post("/register")
 def register_student(data: RegisterRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    verification_token = secrets.token_urlsafe(32)
+    verification_expiry = now_utc_naive + timedelta(hours=24)
+
     existing = db.query(Student).filter(Student.email == data.email).first()
     if existing:
-        # If student exists but has no password (legacy from booking), set password
+        # If student exists but has no password (legacy from booking), set password and require verification
         if not existing.password_hash:
             existing.password_hash = hash_password(data.password)
             existing.name = data.name
+            existing.email_verified = False
+            existing.verification_token = verification_token
+            existing.verification_token_expiry = verification_expiry
             db.commit()
             db.refresh(existing)
-            background_tasks.add_task(send_student_welcome_email, existing.email, existing.name)
-            token = create_student_token(existing.id, existing.name, existing.email)
+
+            verify_url = f"{FRONTEND_URL}/student/verify-email?token={verification_token}"
+            background_tasks.add_task(send_student_verification_email, existing.email, existing.name, verify_url)
+
             return {
+                "status": "pending_verification",
+                "message": "Account created! Please check your email to verify your account before logging in.",
                 "student_id": existing.id,
                 "name": existing.name,
                 "email": existing.email,
-                "access_token": token,
-                "token_type": "bearer",
+                "email_verified": False,
             }
         raise HTTPException(status_code=409, detail="An account with this email already exists.")
 
@@ -63,21 +88,75 @@ def register_student(data: RegisterRequest, background_tasks: BackgroundTasks, d
         name=data.name,
         email=data.email,
         password_hash=hash_password(data.password),
+        email_verified=False,
+        verification_token=verification_token,
+        verification_token_expiry=verification_expiry,
     )
     db.add(student)
     db.commit()
     db.refresh(student)
 
-    # Congratulate the student on their new account (non-blocking)
+    verify_url = f"{FRONTEND_URL}/student/verify-email?token={verification_token}"
+    background_tasks.add_task(send_student_verification_email, student.email, student.name, verify_url)
+
+    return {
+        "status": "pending_verification",
+        "message": "Account created! Please check your email to verify your account before logging in.",
+        "student_id": student.id,
+        "name": student.name,
+        "email": student.email,
+        "email_verified": False,
+    }
+
+
+@router.post("/verify-email")
+def verify_email(data: VerifyEmailRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Verify a student account with the single-use token sent by email."""
+    student = db.query(Student).filter(Student.verification_token == data.token).first()
+    if not student:
+        raise HTTPException(status_code=400, detail="Invalid or already used verification link.")
+
+    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+    if student.verification_token_expiry and student.verification_token_expiry < now_utc_naive:
+        raise HTTPException(status_code=400, detail="Verification link has expired. Please request a new one.")
+
+    student.email_verified = True
+    student.verification_token = None
+    student.verification_token_expiry = None
+    db.commit()
+    db.refresh(student)
+
+    # Congratulate student on verifying their account
     background_tasks.add_task(send_student_welcome_email, student.email, student.name)
 
     token = create_student_token(student.id, student.name, student.email)
     return {
+        "status": "success",
+        "message": "Email verified successfully! Welcome to Spanish with Marta.",
         "student_id": student.id,
         "name": student.name,
         "email": student.email,
         "access_token": token,
         "token_type": "bearer",
+    }
+
+
+@router.post("/resend-verification")
+def resend_verification(data: ResendVerificationRequest, background_tasks: BackgroundTasks, db: Session = Depends(get_db)):
+    """Resend verification email to an unverified student. Always returns 200 to prevent email enumeration."""
+    student = db.query(Student).filter(Student.email == data.email).first()
+    if student and not student.email_verified:
+        now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
+        token = secrets.token_urlsafe(32)
+        student.verification_token = token
+        student.verification_token_expiry = now_utc_naive + timedelta(hours=24)
+        db.commit()
+
+        verify_url = f"{FRONTEND_URL}/student/verify-email?token={token}"
+        background_tasks.add_task(send_student_verification_email, student.email, student.name, verify_url)
+
+    return {
+        "message": "If an unverified account exists for this email, a new verification link has been sent."
     }
 
 
@@ -106,6 +185,12 @@ def login_student(data: LoginRequest, db: Session = Depends(get_db)):
     if not password_valid:
         raise HTTPException(status_code=401, detail="Invalid email or password.")
 
+    if not student.email_verified:
+        raise HTTPException(
+            status_code=403,
+            detail="Please verify your email address before logging in. Check your inbox for the verification link.",
+        )
+
     token = create_student_token(student.id, student.name, student.email)
     return {
         "student_id": student.id,
@@ -124,20 +209,23 @@ def google_login(data: GoogleLoginRequest, background_tasks: BackgroundTasks, db
     student = db.query(Student).filter(Student.email == data.email).first()
 
     if not student:
-        # Create new student from Google data
+        # Create new student from Google data (Google-verified email)
         student = Student(
             name=data.name,
             email=data.email,
-            google_id=data.google_id
+            google_id=data.google_id,
+            email_verified=True,
         )
         db.add(student)
         db.commit()
         db.refresh(student)
         # First-time Google sign-in creates an account — send welcome email
         background_tasks.add_task(send_student_welcome_email, student.email, student.name)
-    elif not student.google_id:
-        # Link existing account to Google
-        student.google_id = data.google_id
+    else:
+        # Google sign-in guarantees email ownership
+        student.email_verified = True
+        if not student.google_id:
+            student.google_id = data.google_id
         db.commit()
         db.refresh(student)
 
@@ -151,6 +239,7 @@ def google_login(data: GoogleLoginRequest, background_tasks: BackgroundTasks, db
     }
 
 
+
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
 
@@ -159,8 +248,6 @@ class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
 
-
-FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 
 @router.post("/forgot-password")

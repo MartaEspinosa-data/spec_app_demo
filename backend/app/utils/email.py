@@ -457,3 +457,54 @@ def send_student_welcome_email(email: str, name: str):
     """
 
     return _send_email(email, subject, html_body)
+
+
+# ---------------------------------------------------------------------------
+# Account Verification Email
+# ---------------------------------------------------------------------------
+
+def send_student_verification_email(email: str, name: str, verify_url: str):
+    """Send an account verification email with a secure link to confirm the email exists."""
+    subject = "✉️ Confirma tu correo — Spanish with Marta"
+
+    html_body = f"""
+    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8faff; border-radius: 24px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 40px 32px; text-align: center;">
+            <h1 style="color: white; font-size: 28px; margin: 0;">¡Verifica tu cuenta! ✉️🇪🇸</h1>
+            <p style="color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 8px;">Please verify your email address to get started</p>
+        </div>
+
+        <div style="padding: 32px;">
+            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{name}</strong>,</p>
+            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+                Thank you for creating an account on <strong>Spanish with Marta</strong>!
+                Please confirm that this is your email address by clicking the button below:
+            </p>
+
+            <div style="text-align: center; margin: 40px 0;">
+                <a href="{verify_url}"
+                   style="display: inline-block; background: #4f46e5; color: white; padding: 16px 40px;
+                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: bold;
+                          box-shadow: 0 4px 14px rgba(79,70,229,0.4);">
+                    ✅ Confirm Email Address
+                </a>
+                <p style="color: #9ca3af; font-size: 13px; margin-top: 12px;">
+                    Or copy this link: <a href="{verify_url}" style="color: #4f46e5;">{verify_url}</a>
+                </p>
+            </div>
+
+            <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 24px 0;">
+                <p style="font-size: 13px; color: #92400e; margin: 0; text-align: center;">
+                    ⚠️ This link expires in <strong>24 hours</strong>. If you did not create this account, you can safely ignore this email.
+                </p>
+            </div>
+
+            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+                ¡Hasta pronto! — Profe Marta ❤️
+            </p>
+        </div>
+    </div>
+    """
+
+    return _send_email(email, subject, html_body)
+

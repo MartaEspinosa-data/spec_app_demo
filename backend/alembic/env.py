@@ -18,7 +18,7 @@ import os
 import sys
 sys.path.insert(0, os.path.realpath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.database.database import Base
+from app.database.database import Base, SQLALCHEMY_DATABASE_URL
 from app.models.teacher import Teacher
 from app.models.student import Student
 from app.models.lesson import Lesson
@@ -26,8 +26,8 @@ from app.models.availability import TeacherAvailability
 
 target_metadata = Base.metadata
 
-# Override sqlalchemy.url with DATABASE_URL env var when available (e.g. PostgreSQL in production)
-_database_url = os.getenv("DATABASE_URL")
+# Override sqlalchemy.url with DATABASE_URL env var or app's SQLALCHEMY_DATABASE_URL
+_database_url = os.getenv("DATABASE_URL", SQLALCHEMY_DATABASE_URL)
 if _database_url:
     config.set_main_option("sqlalchemy.url", _database_url)
 

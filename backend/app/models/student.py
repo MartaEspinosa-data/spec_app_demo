@@ -1,5 +1,5 @@
-from sqlalchemy import Column, String, DateTime
-from sqlalchemy.sql import func
+from sqlalchemy import Column, String, DateTime, Boolean
+from sqlalchemy.sql import func, false
 from app.database.database import Base
 import uuid
 
@@ -16,5 +16,8 @@ class Student(Base):
     google_id = Column(String, unique=True, index=True, nullable=True)
     reset_token = Column(String, nullable=True, index=True)  # password reset token
     reset_token_expiry = Column(DateTime(timezone=True), nullable=True)  # expiration for reset token
+    email_verified = Column(Boolean, nullable=False, default=False, server_default=false())  # must be True to log in with password
+    verification_token = Column(String, nullable=True, index=True)  # email verification token (single use)
+    verification_token_expiry = Column(DateTime(timezone=True), nullable=True)  # expiration for verification token
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
