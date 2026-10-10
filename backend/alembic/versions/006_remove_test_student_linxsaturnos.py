@@ -23,21 +23,20 @@ depends_on: Union[str, Sequence[str], None] = None
 def upgrade() -> None:
     conn = op.get_bind()
     
-    # Check for student matching linxsaturnos@gmail.com
-    students = conn.execute(
-        sa.text("SELECT id FROM students WHERE lower(email) = 'linxsaturnos@gmail.com'")
-    ).fetchall()
+    # 1. Clean up any lessons for linxsaturnos@gmail.com
+    conn.execute(
+        sa.text("""
+            DELETE FROM lessons 
+            WHERE student_id IN (
+                SELECT id FROM students WHERE lower(email) = 'linxsaturnos@gmail.com'
+            )
+        """)
+    )
     
-    for row in students:
-        sid = row[0]
-        # Clean up related records in lessons and student_packages
-        conn.execute(sa.text("DELETE FROM lessons WHERE student_id = :sid"), {"sid": str(sid)})
-        try:
-            conn.execute(sa.text("DELETE FROM student_packages WHERE student_id = :sid"), {"sid": str(sid)})
-        except Exception:
-            pass
-        # Delete student record
-        conn.execute(sa.text("DELETE FROM students WHERE id = :sid"), {"sid": str(sid)})
+    # 2. Delete the student record
+    conn.execute(
+        sa.text("DELETE FROM students WHERE lower(email) = 'linxsaturnos@gmail.com'")
+    )
 
 
 def downgrade() -> None:
