@@ -11,7 +11,7 @@ SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
 SMTP_USER = os.getenv("SMTP_USER", "")  # e.g. your-email@gmail.com
 SMTP_PASS = os.getenv("SMTP_PASS", "")  # App password from Gmail
 SENDER_NAME = "Profe Marta"
-TEACHER_EMAIL = os.getenv("TEACHER_NOTIFICATION_EMAIL", "")
+TEACHER_EMAIL = os.getenv("TEACHER_NOTIFICATION_EMAIL") or os.getenv("TEACHER_EMAIL", "")
 
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:
@@ -27,14 +27,15 @@ def _send_email(to_email: str, subject: str, html_body: str) -> bool:
         msg["Subject"] = subject
         msg["From"] = f"{SENDER_NAME} <{SMTP_USER}>"
         msg["To"] = to_email
-        msg.attach(MIMEText(html_body, "html"))
+        msg.attach(MIMEText(html_body, "html", "utf-8"))
 
         with smtplib.SMTP(SMTP_HOST, SMTP_PORT) as server:
             server.starttls()
             server.login(SMTP_USER, SMTP_PASS)
-            server.sendmail(SMTP_USER, to_email, msg.as_string())
+            server.send_message(msg)
 
-        print(f"[EMAIL] Sent to {to_email}: {subject}")
+        safe_subject = subject.encode("ascii", errors="replace").decode("ascii")
+        print(f"[EMAIL] Sent to {to_email}: {safe_subject}")
         return True
     except Exception as e:
         print(f"[EMAIL ERROR] Failed to send to {to_email}: {e}")
