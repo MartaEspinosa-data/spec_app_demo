@@ -174,3 +174,42 @@ Required environment variables in Coolify / Docker:
 | `SMTP_PORT` | `587` | TLS port |
 | `SMTP_USER` | `martaespinosagarcia@gmail.com` | Sender Google Account |
 | `SMTP_PASS` | `qadvkcqmkqekqjaa` | Google App Password (16 characters) |
+
+---
+
+## 7. PostgreSQL vs SQLite Timezone Handling
+
+A critical difference between development (SQLite) and production (PostgreSQL):
+- **PostgreSQL** returns `DateTime(timezone=True)` values as **timezone-aware** Python `datetime` objects (`tzinfo=datetime.timezone.utc`).
+- **SQLite** stores datetimes as naive strings/integers, returning **timezone-naive** `datetime` objects (`tzinfo=None`).
+
+Comparing a timezone-aware datetime directly with `datetime.now(timezone.utc).replace(tzinfo=None)` raises:
+`TypeError: can't compare offset-naive and offset-aware datetimes`
+
+### Helper: `is_token_expired` (`app.utils.auth`)
+
+To ensure robust token expiration checks across both engines, all expiration checks use `is_token_expired`:
+```python
+def is_token_expired(expiry_dt: Optional[datetime]) -> bool:
+    """
+    Check if a token expiry datetime has passed.
+    Works seamlessly with both timezone-aware (PostgreSQL) and naive (SQLite) datetimes.
+    """
+    if expiry_dt is None:
+        return True
+    now = datetime.now(timezone.utc)
+    if expiry_dt.tzinfo is not None:
+        return expiry_dt < now
+    return expiry_dt < now.replace(tzinfo=None)
+```
+
+---
+
+## 8. Unverified Account Re-Registration & Testing Cleanup
+
+1. **Re-registration Resilience**:
+   If a user signs up but closes the tab or loses their email, submitting the registration form again with the same email updates their credentials, generates a fresh token, and re-dispatches the verification email rather than failing with HTTP 409.
+2. **Database Migrations for Test Cleanup**:
+   - `005_student_email_verification.py`: Adds columns and grandfathers existing active accounts.
+   - `006_remove_test_student_linxsaturnos.py`: Cleanly removes test records and orphan lessons via atomic cascading deletes.
+

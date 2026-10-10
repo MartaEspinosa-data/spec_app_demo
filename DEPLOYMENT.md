@@ -428,6 +428,14 @@ coolify server list
 ### 10. Team-Scoped Projects
 Projects are scoped to teams. An API token from one team cannot see projects in another team. Ensure the correct token is used for the correct project.
 
+### 11. PostgreSQL Timezone-Aware vs SQLite Naive Datetimes
+**Error**: `TypeError: can't compare offset-naive and offset-aware datetimes`
+**Fix**: PostgreSQL returns `DateTime(timezone=True)` columns as timezone-aware Python `datetime` objects (`tzinfo=datetime.timezone.utc`), while SQLite returns naive datetimes. Use the `is_token_expired()` helper (`app.utils.auth`) rather than direct comparison with naive `datetime.now()`.
+
+### 12. PostgreSQL Transaction Aborts on Failed Queries
+**Error**: `sqlalchemy.exc.InternalError: (psycopg.errors.InFailedSqlTransaction) current transaction is aborted, commands ignored until end of transaction block`
+**Fix**: Unlike SQLite, PostgreSQL places the entire transaction into an aborted state upon encountering an error (such as querying a non-existent table in a `try...except` block). Never execute queries against optional or unverified tables inside an active Alembic migration transaction without a savepoint.
+
 ---
 
 ## CLI Quick Reference
