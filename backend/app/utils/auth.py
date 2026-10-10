@@ -32,6 +32,21 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     return bcrypt.checkpw(plain_password.encode("utf-8"), hashed_password.encode("utf-8"))
 
 
+# ---- Datetime / Expiry Helper ----
+
+def is_token_expired(expiry_dt: Optional[datetime]) -> bool:
+    """
+    Check if a token expiry datetime has passed.
+    Works seamlessly with both timezone-aware (PostgreSQL) and naive (SQLite) datetimes.
+    """
+    if expiry_dt is None:
+        return True
+    now = datetime.now(timezone.utc)
+    if expiry_dt.tzinfo is not None:
+        return expiry_dt < now
+    return expiry_dt < now.replace(tzinfo=None)
+
+
 # ---- JWT Token Creation ----
 
 def create_access_token(data: Dict[str, Any], expires_delta: Optional[timedelta] = None) -> str:

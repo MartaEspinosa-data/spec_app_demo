@@ -9,6 +9,7 @@ from app.utils.auth import (
     create_student_token,
     get_current_user,
     require_student,
+    is_token_expired,
 )
 from app.utils.email import (
     send_password_reset_email,
@@ -117,8 +118,7 @@ def verify_email(data: VerifyEmailRequest, background_tasks: BackgroundTasks, db
     if not student:
         raise HTTPException(status_code=400, detail="Invalid or already used verification link.")
 
-    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
-    if student.verification_token_expiry and student.verification_token_expiry < now_utc_naive:
+    if is_token_expired(student.verification_token_expiry):
         raise HTTPException(status_code=400, detail="Verification link has expired. Please request a new one.")
 
     student.email_verified = True
@@ -273,11 +273,9 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
         }
 
     # Reuse existing token if it's still valid (prevents double-click overwrite)
-    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
     if (
         student.reset_token is not None
-        and student.reset_token_expiry is not None
-        and student.reset_token_expiry > now_utc_naive
+        and not is_token_expired(student.reset_token_expiry)
     ):
         # Token still valid — re-send the same link
         reset_url = f"{FRONTEND_URL}/student/reset-password?token={student.reset_token}"
@@ -287,10 +285,9 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
         }
 
     # Generate a fresh token (old one expired or never existed)
-    # NOTE: Store naive UTC datetime because SQLite strips timezone info.
     reset_token = secrets.token_urlsafe(32)
     student.reset_token = reset_token
-    student.reset_token_expiry = now_utc_naive + timedelta(hours=1)
+    student.reset_token_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
     db.commit()
 
     reset_url = f"{FRONTEND_URL}/student/reset-password?token={reset_token}"
@@ -314,9 +311,7 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     if not student:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
 
-    # Compare with naive UTC since SQLite strips timezone info on storage.
-    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
-    if student.reset_token_expiry is None or student.reset_token_expiry < now_utc_naive:
+    if is_token_expired(student.reset_token_expiry):
         # Clean up expired token
         student.reset_token = None
         student.reset_token_expiry = None

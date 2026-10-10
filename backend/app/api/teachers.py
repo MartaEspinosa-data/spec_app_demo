@@ -11,6 +11,7 @@ from app.utils.auth import (
     create_teacher_token,
     require_teacher,
     get_current_user,
+    is_token_expired,
 )
 from app.utils.email import send_password_reset_email
 from pydantic import BaseModel, EmailStr
@@ -180,11 +181,9 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
         }
 
     # Reuse existing token if it's still valid (prevents double-click overwrite)
-    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
     if (
         teacher.reset_token is not None
-        and teacher.reset_token_expiry is not None
-        and teacher.reset_token_expiry > now_utc_naive
+        and not is_token_expired(teacher.reset_token_expiry)
     ):
         # Token still valid — re-send the same link
         reset_url = f"{FRONTEND_URL}/teacher/reset-password?token={teacher.reset_token}"
@@ -194,10 +193,9 @@ def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
         }
 
     # Generate a fresh token (old one expired or never existed)
-    # NOTE: Store naive UTC datetime because SQLite strips timezone info.
     reset_token = secrets.token_urlsafe(32)
     teacher.reset_token = reset_token
-    teacher.reset_token_expiry = now_utc_naive + timedelta(hours=1)
+    teacher.reset_token_expiry = datetime.now(timezone.utc) + timedelta(hours=1)
     db.commit()
 
     reset_url = f"{FRONTEND_URL}/teacher/reset-password?token={reset_token}"
@@ -223,9 +221,7 @@ def reset_password(data: ResetPasswordRequest, db: Session = Depends(get_db)):
     if not teacher:
         raise HTTPException(status_code=400, detail="Invalid or expired reset token.")
 
-    # Compare with naive UTC since SQLite strips timezone info on storage.
-    now_utc_naive = datetime.now(timezone.utc).replace(tzinfo=None)
-    if teacher.reset_token_expiry is None or teacher.reset_token_expiry < now_utc_naive:
+    if is_token_expired(teacher.reset_token_expiry):
         # Clean up expired token
         teacher.reset_token = None
         teacher.reset_token_expiry = None
