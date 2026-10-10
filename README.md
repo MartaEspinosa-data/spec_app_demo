@@ -45,7 +45,7 @@ spec_app_demo/
 - **Teacher Calendar** — Teachers manage their availability with a visual weekly grid
 - **Stripe Payments** — Secure payment via Stripe payment links with webhook confirmation
 - **Multi-language** — UI available in English, Spanish, French, and Russian
-- **Auth System** — JWT login for teachers and students, with password reset flow
+- **Auth & Email Verification** — JWT login with bcrypt password hashing for teachers and students, mandatory single-use email verification tokens (24h expiry) sent via Gmail SMTP on registration, and password reset flow. See [Student Verification Guide](docs/student_verification.md)
 - **Timezone-aware** — All times displayed in Europe/Madrid (UTC+2)
 - **Cookie Consent** — GDPR-compliant cookie banner
 - **Legal Pages** — Privacy policy, terms of use, and cookie policy
@@ -104,6 +104,9 @@ The frontend runs on `http://localhost:5173` and proxies API requests to the bac
 | Method | Path                              | Description                   |
 | ------ | --------------------------------- | ----------------------------- |
 | POST   | `/api/teachers/login`             | Teacher authentication        |
+| POST   | `/api/students/register`          | Student registration (sends verification email) |
+| POST   | `/api/students/verify-email`      | Student email verification    |
+| POST   | `/api/students/resend-verification`| Resend verification email    |
 | POST   | `/api/students/login`             | Student authentication        |
 | GET    | `/api/teachers`                   | List teachers                 |
 | GET    | `/api/teachers/{id}`              | Teacher profile               |

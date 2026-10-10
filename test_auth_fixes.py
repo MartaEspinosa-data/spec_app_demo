@@ -32,7 +32,7 @@ print("\n--- 2. Public Slots Endpoint (no auth) ---")
 r = requests.get(f"{BASE}/lessons/slots?teacher_id=dc92ef71-d458-4e75-92d9-69b64fc1c964&date=2026-06-01")
 check("Public slots returns 200 without auth", r.status_code == 200, f"got {r.status_code}: {r.text[:100]}")
 
-# ---- 3. Student Registration (bcrypt hash) ----
+# ---- 3. Student Registration (email verification flow) ----
 print("\n--- 3. Student Registration ---")
 unique_id = str(uuid.uuid4())[:8]
 test_email = f"test-auth-{unique_id}@example.com"
@@ -44,11 +44,32 @@ r = requests.post(f"{BASE}/students/register", json={
 })
 check("Registration returns 200", r.status_code == 200, f"got {r.status_code}: {r.text[:100]}")
 data = r.json()
-check("Registration returns access_token", "access_token" in data, f"keys: {list(data.keys())}")
-check("Registration returns token_type=bearer", data.get("token_type") == "bearer", f"got {data.get('token_type')}")
-student_token = data.get("access_token", "")
+check("Registration status is pending_verification", data.get("status") == "pending_verification", f"got {data.get('status')}")
+check("Registration has email_verified=False", data.get("email_verified") is False, f"got {data.get('email_verified')}")
 student_id = data.get("student_id", "")
 check("Student ID is present", bool(student_id), f"student_id={student_id}")
+
+# 3b. Verify login before verification is blocked (HTTP 403)
+r_unverified = requests.post(f"{BASE}/students/login", json={
+    "email": test_email,
+    "password": test_password
+})
+check("Login before verification returns 403", r_unverified.status_code == 403, f"got {r_unverified.status_code}")
+
+# 3c. Fetch verification token from DB and verify
+import sqlite3
+conn = sqlite3.connect("backend/sql_app.db")
+c = conn.cursor()
+row = c.execute("SELECT verification_token FROM students WHERE id = ?", (student_id,)).fetchone()
+conn.close()
+v_token = row[0] if row else None
+check("Verification token found in DB", bool(v_token))
+
+r_verify = requests.post(f"{BASE}/students/verify-email", json={"token": v_token})
+check("Email verification endpoint returns 200", r_verify.status_code == 200, f"got {r_verify.status_code}")
+v_data = r_verify.json()
+check("Verification returns access_token", "access_token" in v_data)
+student_token = v_data.get("access_token", "")
 
 # ---- 4. Verify bcrypt hash (not SHA-256) ----
 print("\n--- 4. Password Hash Verification ---")

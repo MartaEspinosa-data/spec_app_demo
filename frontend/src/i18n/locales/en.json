@@ -1,4 +1,4 @@
-﻿{
+{
   "nav.brand": "Spanish with Marta",
   "nav.getStarted": "Book a Lesson",
   "nav.teacherDashboard": "Teacher Dashboard",
@@ -14,11 +14,11 @@
   "landing.single.title": "Book a Lesson",
   "landing.contact": "Questions? Contact me at",
   "landing.single.subtitle": "Book an individual lesson with full flexibility — choose your duration and schedule that works best for you.",
-  "landing.single.30min.title": "30 Min Single",
+  "landing.single.30min.title": "30 Min Individual Lesson",
   "landing.single.30min.desc": "One 30-minute session — perfect to try it out or practice a quick conversation.",
-  "landing.single.45min.title": "45 Min Single",
+  "landing.single.45min.title": "45 Min Individual Lesson",
   "landing.single.45min.desc": "One 45-minute session — ideal balance of depth and flexibility.",
-  "landing.single.60min.title": "60 Min Single",
+  "landing.single.60min.title": "60 Min Individual Lesson",
   "landing.single.60min.desc": "One full 60-minute session — the complete immersive experience.",
   "landing.single.bookButton": "Book Now",
   "landing.faq.title": "Common Questions",

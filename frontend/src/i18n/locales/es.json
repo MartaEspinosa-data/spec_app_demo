@@ -1,4 +1,4 @@
-﻿{
+{
     "nav.brand": "Spanish con Marta",
     "nav.getStarted": "Reserva una Lección",
     "nav.teacherDashboard": "Panel de la Profesora",
@@ -14,11 +14,11 @@
     "landing.single.title": "Reserva una Clase",
     "landing.contact": "¿Tienes preguntas? Contáctame en",
     "landing.single.subtitle": "Reserva una clase individual con total flexibilidad — elige la duración y el horario que mejor te convenga.",
-    "landing.single.30min.title": "30 Min Suelta",
+    "landing.single.30min.title": "30 Min Clase Individual",
     "landing.single.30min.desc": "Una sesión de 30 minutos — perfecta para probar o practicar conversación rápida.",
-    "landing.single.45min.title": "45 Min Suelta",
+    "landing.single.45min.title": "45 Min Clase Individual",
     "landing.single.45min.desc": "Una sesión de 45 minutos — equilibrio ideal entre profundidad y flexibilidad.",
-    "landing.single.60min.title": "60 Min Suelta",
+    "landing.single.60min.title": "60 Min Clase Individual",
     "landing.single.60min.desc": "Una sesión completa de 60 minutos — la experiencia inmersiva total.",
     "landing.single.bookButton": "Reservar Ahora",
     "landing.faq.title": "Preguntas Frecuentes",
