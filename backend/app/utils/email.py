@@ -47,48 +47,49 @@ def send_lesson_confirmation(student_email: str, student_name: str, lesson_date:
     subject = f"🎉 Your Spanish Lesson is Confirmed!"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8faff; border-radius: 24px; overflow: hidden;">
-        <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">¡Clase Confirmada! 🇪🇸</h1>
-            <p style="color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 8px;">Your lesson has been successfully booked</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <!-- Header Banner with dark solid background for Outlook/Hotmail -->
+        <div style="background-color: #4338ca; background: #4338ca; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">¡Clase Reservada! 🇪🇸</h1>
+            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Your Spanish lesson has been booked</p>
         </div>
         
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{student_name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{student_name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
                 Thank you for booking a lesson with Profe Marta! Here are your lesson details:
             </p>
             
-            <div style="background: white; border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
+            <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">DATE & TIME</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px; font-weight: bold;">{lesson_date}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">DATE &amp; TIME</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right;">{lesson_date}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">DURATION</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{duration} minutes</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">DURATION</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{duration} minutes</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">TYPE</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{lesson_type}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
                     </tr>
                 </table>
             </div>
             
-            <div style="text-align: center; margin: 32px 0;">
+            <div style="text-align: center; margin: 32px 0 20px 0;">
                 <a href="{GOOGLE_MEET_LINK}"
-                   style="display: inline-block; background: #4f46e5; color: white; padding: 16px 40px;
-                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: bold;
-                          box-shadow: 0 4px 14px rgba(79,70,229,0.4);">
+                   style="display: inline-block; background-color: #4f46e5; background: #4f46e5; color: #ffffff !important; padding: 16px 36px;
+                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
+                          box-shadow: 0 4px 12px rgba(79,70,229,0.3);">
                     📹 Join Google Meet Lesson
                 </a>
-                <p style="color: #9ca3af; font-size: 13px; margin-top: 12px;">
-                    Link: <a href="{GOOGLE_MEET_LINK}" style="color: #4f46e5;">{GOOGLE_MEET_LINK}</a>
+                <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
+                    Meeting link: <a href="{GOOGLE_MEET_LINK}" style="color: #4f46e5; font-weight: 600; text-decoration: underline;">{GOOGLE_MEET_LINK}</a>
                 </p>
             </div>
             
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px; margin-top: 32px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 ¡Nos vemos pronto! — Profe Marta ❤️
             </p>
         </div>
@@ -194,33 +195,33 @@ def send_teacher_acceptance_email(teacher_email: str, teacher_name: str, student
     subject = f"✅ Lesson Accepted: {student_name} on {lesson_date}"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f0fdf4; border-radius: 24px; overflow: hidden; border: 1px solid #bbf7d0;">
-        <div style="background: #16a34a; padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">✅ Lesson Accepted</h1>
-            <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 8px;">You confirmed this lesson</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #065f46; background: #065f46; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">✅ Lesson Accepted</h1>
+            <p style="color: #d1fae5 !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">You confirmed this lesson</p>
         </div>
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{teacher_name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{teacher_name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
                 You have accepted the lesson with <strong>{student_name}</strong>. The student has been notified.
             </p>
-            <div style="background: white; border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
+            <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">STUDENT</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px; font-weight: bold;">{student_name}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">STUDENT</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right;">{student_name}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">DATE & TIME</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{lesson_date}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">DATE &amp; TIME</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_date}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">TYPE</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{lesson_type}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
                     </tr>
                 </table>
             </div>
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 ¡Nos vemos en clase! — Profe Marta ❤️
             </p>
         </div>
@@ -235,42 +236,50 @@ def send_student_acceptance_email(student_email: str, student_name: str, lesson_
     subject = f"🎉 Your Spanish Lesson is Confirmed!"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f0fdf4; border-radius: 24px; overflow: hidden; border: 1px solid #bbf7d0;">
-        <div style="background: linear-gradient(135deg, #16a34a, #15803d); padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">✅ Clase Aceptada 🇪🇸</h1>
-            <p style="color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 8px;">Your teacher has confirmed your lesson!</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <!-- Header Banner with dark solid background for full Outlook/Hotmail support -->
+        <div style="background-color: #065f46; background: #065f46; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">✅ ¡Clase Aceptada! 🇪🇸</h1>
+            <p style="color: #d1fae5 !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Your teacher has confirmed your Spanish lesson</p>
         </div>
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{student_name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
-                Profe Marta has accepted your lesson. Here are your details:
+        
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{student_name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
+                Profe Marta has accepted your lesson. Here are your lesson details:
             </p>
-            <div style="background: white; border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
+            
+            <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">DATE & TIME</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px; font-weight: bold;">{lesson_date}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">DATE &amp; TIME</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right;">{lesson_date}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">DURATION</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{duration} minutes</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">DURATION</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{duration} minutes</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">TYPE</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{lesson_type}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
                     </tr>
                 </table>
             </div>
-            <div style="text-align: center; margin: 32px 0;">
+
+            <div style="text-align: center; margin: 32px 0 20px 0;">
                 <a href="{GOOGLE_MEET_LINK}"
-                   style="display: inline-block; background: #16a34a; color: white; padding: 16px 40px;
-                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: bold;
-                          box-shadow: 0 4px 14px rgba(22,163,74,0.4);">
+                   style="display: inline-block; background-color: #059669; background: #059669; color: #ffffff !important; padding: 16px 36px;
+                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
+                          box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
                     📹 Join Google Meet Lesson
                 </a>
+                <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
+                    Meeting link: <a href="{GOOGLE_MEET_LINK}" style="color: #059669; font-weight: 600; text-decoration: underline;">{GOOGLE_MEET_LINK}</a>
+                </p>
             </div>
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
-                ¡Nos vemos pronto! — Profe Marta ❤️
+
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
+                ¡Nos vemos pronto en clase! — Profe Marta ❤️
             </p>
         </div>
     </div>
@@ -284,40 +293,40 @@ def send_student_rejection_email(student_email: str, student_name: str, lesson_d
     subject = f"❌ Your Spanish Lesson Request was Declined"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fef2f2; border-radius: 24px; overflow: hidden; border: 1px solid #fecaca;">
-        <div style="background: #dc2626; padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">❌ Clase Rechazada</h1>
-            <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 8px;">Your lesson request could not be accepted</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #991b1b; background: #991b1b; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">❌ Clase No Confirmada</h1>
+            <p style="color: #fee2e2 !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Your lesson request could not be accepted</p>
         </div>
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{student_name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
-                Unfortunately, Profe Marta is unable to accept your lesson request for the following time:
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{student_name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
+                Unfortunately, Profe Marta is unable to accept your lesson request for the requested time:
             </p>
-            <div style="background: white; border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
+            <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">DATE & TIME</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px; font-weight: bold;">{lesson_date}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">DATE &amp; TIME</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right;">{lesson_date}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">TYPE</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{lesson_type}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">AMOUNT</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px; font-weight: bold;">${price:.2f}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">AMOUNT</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">${price:.2f}</td>
                     </tr>
                 </table>
             </div>
-            <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 16px; padding: 20px; margin: 24px 0; text-align: center;">
-                <p style="font-size: 16px; color: #92400e; font-weight: bold; margin: 0;">💸 A refund of <strong>${price:.2f}</strong> will be issued back to you.</p>
-                <p style="font-size: 13px; color: #a16207; margin: 8px 0 0 0;">Please allow 5–10 business days for the refund to appear on your statement.</p>
+            <div style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 18px; margin: 24px 0; text-align: center;">
+                <p style="font-size: 15px; color: #92400e; font-weight: 700; margin: 0;">💸 A full refund of <strong>${price:.2f}</strong> is being processed.</p>
+                <p style="font-size: 13px; color: #a16207; margin: 6px 0 0 0;">Please allow 5–10 business days for the credit to appear on your statement.</p>
             </div>
-            <p style="font-size: 16px; color: #4b5563; text-align: center;">
-                You are welcome to <a href="{os.getenv('FRONTEND_URL', 'http://localhost:5173')}" style="color: #4f46e5; font-weight: bold;">book another time</a> that works for you.
+            <p style="font-size: 15px; color: #374151; text-align: center; margin: 24px 0;">
+                You are welcome to <a href="{os.getenv('FRONTEND_URL', 'https://martaspanishteacher.com')}" style="color: #4f46e5; font-weight: bold; text-decoration: underline;">book another time slot</a> that fits your schedule.
             </p>
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px; margin-top: 32px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 Disculpa las molestias — Profe Marta ❤️
             </p>
         </div>
@@ -332,33 +341,33 @@ def send_teacher_rejection_confirmation_email(teacher_email: str, teacher_name: 
     subject = f"❌ Lesson Rejected: {student_name} on {lesson_date}"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fef2f2; border-radius: 24px; overflow: hidden; border: 1px solid #fecaca;">
-        <div style="background: #dc2626; padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">❌ Lesson Rejected</h1>
-            <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 8px;">You declined this lesson request</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #991b1b; background: #991b1b; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">❌ Lesson Rejected</h1>
+            <p style="color: #fee2e2 !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">You declined this lesson request</p>
         </div>
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{teacher_name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{teacher_name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
                 You have rejected the lesson request from <strong>{student_name}</strong>. The student has been notified and their refund is being processed.
             </p>
-            <div style="background: white; border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
+            <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">STUDENT</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px; font-weight: bold;">{student_name}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">STUDENT</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right;">{student_name}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">DATE & TIME</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{lesson_date}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">DATE &amp; TIME</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_date}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 8px 0; color: #9ca3af; font-size: 14px; font-weight: bold;">TYPE</td>
-                        <td style="padding: 8px 0; color: #1f2937; font-size: 16px;">{lesson_type}</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
                     </tr>
                 </table>
             </div>
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 The time slot is now free for other bookings.
             </p>
         </div>
@@ -377,38 +386,38 @@ def send_password_reset_email(email: str, name: str, reset_url: str, role: str =
     subject = f"🔐 Reset Your Password — Spanish with Marta"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8faff; border-radius: 24px; overflow: hidden; border: 1px solid #e5e7eb;">
-        <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">Password Reset 🔐</h1>
-            <p style="color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 8px;">You requested a password reset</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #4338ca; background: #4338ca; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">Password Reset 🔐</h1>
+            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">You requested a password reset</p>
         </div>
         
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
                 We received a request to reset the password for your {role} account on Spanish with Marta.
                 Click the button below to set a new password:
             </p>
             
-            <div style="text-align: center; margin: 40px 0;">
+            <div style="text-align: center; margin: 32px 0 20px 0;">
                 <a href="{reset_url}"
-                   style="display: inline-block; background: #4f46e5; color: white; padding: 16px 40px;
-                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: bold;
-                          box-shadow: 0 4px 14px rgba(79,70,229,0.4);">
+                   style="display: inline-block; background-color: #4f46e5; background: #4f46e5; color: #ffffff !important; padding: 16px 36px;
+                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
+                          box-shadow: 0 4px 12px rgba(79,70,229,0.3);">
                     🔑 Reset My Password
                 </a>
-                <p style="color: #9ca3af; font-size: 13px; margin-top: 12px;">
-                    Or copy this link: <a href="{reset_url}" style="color: #4f46e5;">{reset_url}</a>
+                <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
+                    Or copy this link: <a href="{reset_url}" style="color: #4f46e5; font-weight: 600; text-decoration: underline;">{reset_url}</a>
                 </p>
             </div>
             
-            <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 24px 0;">
+            <div style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 24px 0;">
                 <p style="font-size: 13px; color: #92400e; margin: 0; text-align: center;">
                     ⚠️ This link expires in <strong>1 hour</strong>. If you didn't request this, you can safely ignore this email.
                 </p>
             </div>
             
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 ¡Hasta pronto! — Profe Marta ❤️
             </p>
         </div>
@@ -424,40 +433,40 @@ def send_password_reset_email(email: str, name: str, reset_url: str, role: str =
 
 def send_student_welcome_email(email: str, name: str):
     """Congratulate a student on creating their account and invite them to book a lesson."""
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173")
+    frontend_url = os.getenv("FRONTEND_URL", "https://martaspanishteacher.com")
     subject = "🎉 ¡Bienvenido/a! Your account is ready — Spanish with Marta"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8faff; border-radius: 24px; overflow: hidden; border: 1px solid #e5e7eb;">
-        <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">¡Enhorabuena! 🎉🇪🇸</h1>
-            <p style="color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 8px;">Your account has been created successfully</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #4338ca; background: #4338ca; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">¡Enhorabuena! 🎉🇪🇸</h1>
+            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Your account has been created successfully</p>
         </div>
 
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
                 Congratulations — you now have an account with <strong>Spanish with Marta</strong>!
                 You can now book Spanish lessons, manage your upcoming classes and review your lesson feedback, all in one place.
             </p>
 
-            <div style="background: white; border-radius: 16px; padding: 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
-                <p style="font-size: 14px; color: #9ca3af; font-weight: bold; margin: 0 0 12px 0;">WHAT YOU CAN DO NOW</p>
-                <p style="font-size: 16px; color: #1f2937; margin: 8px 0;">📅 Book your first Spanish lesson</p>
-                <p style="font-size: 16px; color: #1f2937; margin: 8px 0;">📹 Join your classes via Google Meet</p>
-                <p style="font-size: 16px; color: #1f2937; margin: 8px 0;">📝 Review vocabulary, corrections &amp; materials after each class</p>
+            <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
+                <p style="font-size: 13px; color: #4b5563; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin: 0 0 12px 0;">WHAT YOU CAN DO NOW</p>
+                <p style="font-size: 15px; color: #111827; margin: 8px 0; font-weight: 600;">📅 Book your first Spanish lesson</p>
+                <p style="font-size: 15px; color: #111827; margin: 8px 0; font-weight: 600;">📹 Join your classes via Google Meet</p>
+                <p style="font-size: 15px; color: #111827; margin: 8px 0; font-weight: 600;">📝 Review vocabulary, corrections &amp; materials after each class</p>
             </div>
 
-            <div style="text-align: center; margin: 32px 0;">
+            <div style="text-align: center; margin: 32px 0 20px 0;">
                 <a href="{frontend_url}"
-                   style="display: inline-block; background: #4f46e5; color: white; padding: 16px 40px;
-                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: bold;
-                          box-shadow: 0 4px 14px rgba(79,70,229,0.4);">
+                   style="display: inline-block; background-color: #4f46e5; background: #4f46e5; color: #ffffff !important; padding: 16px 36px;
+                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
+                          box-shadow: 0 4px 12px rgba(79,70,229,0.3);">
                     📚 Book a Lesson
                 </a>
             </div>
 
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 ¡Nos vemos pronto en clase! — Profe Marta ❤️
             </p>
         </div>
@@ -476,38 +485,38 @@ def send_student_verification_email(email: str, name: str, verify_url: str):
     subject = "✉️ Confirma tu correo — Spanish with Marta"
 
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #f8faff; border-radius: 24px; overflow: hidden; border: 1px solid #e5e7eb;">
-        <div style="background: linear-gradient(135deg, #4f46e5, #7c3aed); padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">¡Verifica tu cuenta! ✉️🇪🇸</h1>
-            <p style="color: rgba(255,255,255,0.85); font-size: 16px; margin-top: 8px;">Please verify your email address to get started</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #4338ca; background: #4338ca; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">¡Verifica tu cuenta! ✉️🇪🇸</h1>
+            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Please verify your email address to get started</p>
         </div>
 
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
                 Thank you for creating an account on <strong>Spanish with Marta</strong>!
                 Please confirm that this is your email address by clicking the button below:
             </p>
 
-            <div style="text-align: center; margin: 40px 0;">
+            <div style="text-align: center; margin: 32px 0 20px 0;">
                 <a href="{verify_url}"
-                   style="display: inline-block; background: #4f46e5; color: white; padding: 16px 40px;
-                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: bold;
-                          box-shadow: 0 4px 14px rgba(79,70,229,0.4);">
+                   style="display: inline-block; background-color: #4f46e5; background: #4f46e5; color: #ffffff !important; padding: 16px 36px;
+                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
+                          box-shadow: 0 4px 12px rgba(79,70,229,0.3);">
                     ✅ Confirm Email Address
                 </a>
-                <p style="color: #9ca3af; font-size: 13px; margin-top: 12px;">
-                    Or copy this link: <a href="{verify_url}" style="color: #4f46e5;">{verify_url}</a>
+                <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
+                    Or copy this link: <a href="{verify_url}" style="color: #4f46e5; font-weight: 600; text-decoration: underline;">{verify_url}</a>
                 </p>
             </div>
 
-            <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 24px 0;">
+            <div style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 16px; margin: 24px 0;">
                 <p style="font-size: 13px; color: #92400e; margin: 0; text-align: center;">
                     ⚠️ This link expires in <strong>24 hours</strong>. If you did not create this account, you can safely ignore this email.
                 </p>
             </div>
 
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 ¡Hasta pronto! — Profe Marta ❤️
             </p>
         </div>
