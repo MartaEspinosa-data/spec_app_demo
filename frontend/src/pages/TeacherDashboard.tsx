@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, LogOut, Home, BookOpen, User, Clock, DollarSign, Menu, X, Trash2 } from 'lucide-react';
+import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
+import { Calendar, LogOut, Home, BookOpen, User, Clock, DollarSign, Menu, X, Trash2, Check, AlertCircle } from 'lucide-react';
 import LanguageSelector from '../components/LanguageSelector';
 import { useToast } from '../components/Toast';
 import { TeacherAvailabilityGrid } from '../components/calendar/TeacherAvailabilityGrid';
@@ -17,6 +17,7 @@ interface LessonInfo {
     duration: number;
     price: number;
     status: string;
+    payment_method?: string;
     feedback_vocabulary?: string;
     feedback_errors?: string;
     feedback_materials?: string;
@@ -25,10 +26,17 @@ interface LessonInfo {
 
 const TeacherDashboard = () => {
     const navigate = useNavigate();
+    const location = useLocation();
+    const [searchParams, setSearchParams] = useSearchParams();
     const { addToast } = useToast();
-    const [activeTab, setActiveTab] = useState<'availability' | 'lessons'>('availability');
+
+    const tabParam = searchParams.get('tab');
+    const [activeTab, setActiveTab] = useState<'availability' | 'lessons'>(
+        tabParam === 'lessons' ? 'lessons' : 'availability'
+    );
     const [lessons, setLessons] = useState<LessonInfo[]>([]);
     const [loadingLessons, setLoadingLessons] = useState(false);
+    const [acceptingId, setAcceptingId] = useState<string | null>(null);
     const [editingLesson, setEditingLesson] = useState<LessonInfo | null>(null);
     const [feedbackForm, setFeedbackForm] = useState({
         vocabulary: '',
@@ -46,23 +54,52 @@ const TeacherDashboard = () => {
     const [showClearAll, setShowClearAll] = useState(false);
     const [clearing, setClearing] = useState(false);
 
+    const getTeacherId = () => {
+        try {
+            const teacherAuth = localStorage.getItem('teacher_auth');
+            if (teacherAuth) {
+                const parsed = JSON.parse(teacherAuth);
+                if (parsed.teacher_id) return parsed.teacher_id;
+            }
+        } catch {
+            // fallback
+        }
+        return TEACHER_ID;
+    };
+
+    const currentTeacherId = getTeacherId();
+
     useEffect(() => {
         const teacherAuth = localStorage.getItem('teacher_auth');
+        const currentPath = location.pathname + location.search;
         if (!teacherAuth) {
-            navigate('/teacher/login');
+            navigate(`/teacher/login?redirect=${encodeURIComponent(currentPath)}`);
             return;
         }
         try {
             const parsed = JSON.parse(teacherAuth);
             if (!parsed.access_token) {
                 localStorage.removeItem('teacher_auth');
-                navigate('/teacher/login');
+                navigate(`/teacher/login?redirect=${encodeURIComponent(currentPath)}`);
             }
         } catch {
             localStorage.removeItem('teacher_auth');
-            navigate('/teacher/login');
+            navigate(`/teacher/login?redirect=${encodeURIComponent(currentPath)}`);
         }
-    }, [navigate]);
+    }, [navigate, location]);
+
+    // Keep activeTab in sync with query parameter if changed externally
+    useEffect(() => {
+        const tab = searchParams.get('tab');
+        if (tab === 'lessons' || tab === 'availability') {
+            setActiveTab(tab);
+        }
+    }, [searchParams]);
+
+    // Always fetch lessons on mount so we can display pending badge/alerts immediately
+    useEffect(() => {
+        fetchLessons();
+    }, []);
 
     useEffect(() => {
         if (activeTab === 'lessons') {
@@ -73,9 +110,9 @@ const TeacherDashboard = () => {
     const fetchLessons = async () => {
         setLoadingLessons(true);
         try {
-            const res = await apiClient.get(`/lessons/teacher/${TEACHER_ID}`);
+            const res = await apiClient.get(`/lessons/teacher/${currentTeacherId}`);
             // Filter out completed lessons (they disappear once marked complete).
-            // Pending lessons ARE shown — the teacher can reject/cancel them.
+            // Pending lessons ARE shown — the teacher can accept/reject/cancel them.
             const activeLessons = res.data.lessons.filter(
                 (l: LessonInfo) => l.status !== 'completed'
             );
@@ -120,6 +157,21 @@ const TeacherDashboard = () => {
         }
     };
 
+    const handleAcceptLesson = async (lesson: LessonInfo) => {
+        setAcceptingId(lesson.id);
+        try {
+            await apiClient.patch(`/lessons/${lesson.id}/feedback`, {}, {
+                params: { status: 'scheduled' }
+            });
+            await fetchLessons();
+            addToast('success', `¡Clase aceptada! Se ha confirmado el horario y enviado el correo a ${lesson.student_name}.`);
+        } catch (err: any) {
+            addToast('error', err?.response?.data?.detail || 'Error al aceptar la clase.');
+        } finally {
+            setAcceptingId(null);
+        }
+    };
+
     const updateStatus = async (lessonId: string, newStatus: string, lesson: LessonInfo) => {
         // If teacher is cancelling any non-completed lesson, show confirmation dialog
         // (covers both pending→cancelled and scheduled→cancelled)
@@ -141,7 +193,11 @@ const TeacherDashboard = () => {
             } else {
                 fetchLessons();
             }
-            addToast('success', `Lesson status updated to ${newStatus}.`);
+            if (newStatus === 'scheduled') {
+                addToast('success', '¡Clase aceptada y confirmada con éxito!');
+            } else {
+                addToast('success', `Lesson status updated to ${newStatus}.`);
+            }
         } catch (err: any) {
             addToast('error', err?.response?.data?.detail || 'Failed to update lesson status.');
         }
@@ -174,7 +230,7 @@ const TeacherDashboard = () => {
     const confirmClearAll = async () => {
         setClearing(true);
         try {
-            const res = await apiClient.delete(`/lessons/teacher/${TEACHER_ID}`);
+            const res = await apiClient.delete(`/lessons/teacher/${currentTeacherId}`);
             const deletedCount = res.data.deleted_count;
             setLessons([]);
             addToast('success', `${deletedCount} lesson(s) have been permanently deleted.`);
@@ -216,6 +272,14 @@ const TeacherDashboard = () => {
         }
     };
 
+    const pendingLessons = lessons.filter(l => l.status === 'pending');
+
+    const sortedLessons = [...lessons].sort((a, b) => {
+        if (a.status === 'pending' && b.status !== 'pending') return -1;
+        if (a.status !== 'pending' && b.status === 'pending') return 1;
+        return new Date(b.start_time).getTime() - new Date(a.start_time).getTime();
+    });
+
     const navItems = [
         { name: 'Availability', icon: <Calendar size={20} />, key: 'availability' as const },
         { name: 'Lessons', icon: <BookOpen size={20} />, key: 'lessons' as const },
@@ -223,6 +287,7 @@ const TeacherDashboard = () => {
 
     const selectTab = (key: 'availability' | 'lessons') => {
         setActiveTab(key);
+        setSearchParams({ tab: key });
         setSidebarOpen(false);
     };
 
@@ -245,10 +310,17 @@ const TeacherDashboard = () => {
                     <button
                         key={item.key}
                         onClick={() => selectTab(item.key)}
-                        className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${activeTab === item.key ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-gray-50'}`}
+                        className={`flex items-center justify-between px-4 py-3 rounded-xl font-bold transition-all ${activeTab === item.key ? 'bg-indigo-50 text-indigo-600' : 'text-gray-500 hover:bg-gray-50'}`}
                     >
-                        {item.icon}
-                        {item.name}
+                        <span className="flex items-center gap-3">
+                            {item.icon}
+                            {item.name}
+                        </span>
+                        {item.key === 'lessons' && pendingLessons.length > 0 && (
+                            <span className="bg-amber-500 text-white text-[10px] font-black px-2 py-0.5 rounded-full animate-pulse shadow-sm">
+                                {pendingLessons.length} pendiente{pendingLessons.length > 1 ? 's' : ''}
+                            </span>
+                        )}
                     </button>
                 ))}
             </nav>
@@ -267,8 +339,18 @@ const TeacherDashboard = () => {
                 <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 rounded-lg hover:bg-gray-100 transition">
                     {sidebarOpen ? <X size={22} className="text-gray-600" /> : <Menu size={22} className="text-gray-600" />}
                 </button>
-                <div className="text-base font-black text-indigo-600 tracking-tighter uppercase">
-                    {activeTab === 'availability' ? 'Availability' : 'Lessons'}
+                <div className="flex items-center gap-2">
+                    <div className="text-base font-black text-indigo-600 tracking-tighter uppercase">
+                        {activeTab === 'availability' ? 'Availability' : 'Lessons'}
+                    </div>
+                    {pendingLessons.length > 0 && activeTab !== 'lessons' && (
+                        <button
+                            onClick={() => selectTab('lessons')}
+                            className="text-[10px] bg-amber-500 text-white px-2 py-0.5 rounded-full font-black animate-pulse"
+                        >
+                            {pendingLessons.length} pendientes
+                        </button>
+                    )}
                 </div>
                 <div className="flex items-center gap-2">
                     <LanguageSelector />
@@ -304,11 +386,52 @@ const TeacherDashboard = () => {
                 </header>
 
                 {activeTab === 'availability' ? (
-                    <div className="flex justify-center">
-                        <TeacherAvailabilityGrid teacherId={TEACHER_ID} />
+                    <div className="max-w-5xl mx-auto">
+                        {pendingLessons.length > 0 && (
+                            <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 shadow-sm animate-in fade-in">
+                                <div className="flex items-center gap-3.5">
+                                    <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                                        <AlertCircle size={22} className="text-amber-600" />
+                                    </div>
+                                    <div>
+                                        <h4 className="font-black text-amber-950 text-sm sm:text-base">
+                                            Tienes {pendingLessons.length} clase{pendingLessons.length > 1 ? 's' : ''} pendiente{pendingLessons.length > 1 ? 's' : ''} de aceptar
+                                        </h4>
+                                        <p className="text-xs text-amber-700 font-medium">
+                                            Un estudiante ha reservado una clase. Acéptala para confirmar el horario y enviar los datos al alumno.
+                                        </p>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => selectTab('lessons')}
+                                    className="w-full sm:w-auto px-4 py-2.5 bg-amber-600 hover:bg-amber-700 text-white text-xs font-black uppercase tracking-wider rounded-xl transition-all shadow-sm shrink-0 flex items-center justify-center gap-2 hover:scale-[1.02]"
+                                >
+                                    Ver y Aceptar Clases →
+                                </button>
+                            </div>
+                        )}
+                        <div className="flex justify-center">
+                            <TeacherAvailabilityGrid teacherId={currentTeacherId} />
+                        </div>
                     </div>
                 ) : (
                     <div className="max-w-5xl">
+                        {pendingLessons.length > 0 && (
+                            <div className="mb-6 p-4 sm:p-5 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl flex items-center gap-3.5 shadow-sm">
+                                <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center shrink-0">
+                                    <AlertCircle size={22} className="text-amber-600" />
+                                </div>
+                                <div>
+                                    <h4 className="font-black text-amber-950 text-sm sm:text-base">
+                                        {pendingLessons.length} clase{pendingLessons.length > 1 ? 's' : ''} pendiente{pendingLessons.length > 1 ? 's' : ''} de confirmación
+                                    </h4>
+                                    <p className="text-xs text-amber-700 font-medium">
+                                        Haz clic en <strong>"Aceptar Clase"</strong> para confirmar la reserva y enviar el correo con el enlace de Google Meet al alumno.
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+
                         {loadingLessons ? (
                             <div className="text-center py-20 text-gray-400 font-bold text-lg">Loading lessons...</div>
                         ) : lessons.length === 0 ? (
@@ -323,6 +446,7 @@ const TeacherDashboard = () => {
                                     <div className="flex items-center gap-4">
                                         <p className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-wider">
                                             {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} total
+                                            {pendingLessons.length > 0 && ` (${pendingLessons.length} pendientes)`}
                                         </p>
                                         <button
                                             onClick={handleClearAll}
@@ -334,39 +458,81 @@ const TeacherDashboard = () => {
                                     </div>
                                     <p className="text-xs text-gray-400">Times shown in Europe/Madrid</p>
                                 </div>
-                                {lessons.map((lesson) => (
-                                    <div key={lesson.id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all p-4 sm:p-6">
-                                        <div className="flex items-start justify-between flex-wrap gap-3 sm:gap-4">
-                                            <div className="flex items-center gap-3 sm:gap-4">
-                                                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-                                                    <User size={20} className="text-indigo-500" />
+                                {sortedLessons.map((lesson) => {
+                                    const isPending = lesson.status === 'pending';
+                                    return (
+                                        <div
+                                            key={lesson.id}
+                                            className={`rounded-2xl transition-all p-4 sm:p-6 ${
+                                                isPending
+                                                    ? 'bg-amber-50/30 border-2 border-amber-300 ring-2 ring-amber-100 shadow-md'
+                                                    : 'bg-white border border-gray-100 shadow-sm hover:shadow-md'
+                                            }`}
+                                        >
+                                            {isPending && (
+                                                <div className="mb-4 px-3 py-2 bg-amber-100/80 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-2">
+                                                    <span className="flex items-center gap-2 text-xs font-black text-amber-900 uppercase tracking-wider">
+                                                        <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
+                                                        ⚠️ Nueva Reserva Pendiente de Aceptación
+                                                    </span>
+                                                    <span className="text-[11px] font-bold text-amber-800">
+                                                        {lesson.payment_method === 'stripe' ? '💳 Pago con Stripe' : '💵 Pago Manual'}
+                                                    </span>
                                                 </div>
-                                                <div className="min-w-0">
-                                                    <h3 className="font-black text-gray-900 text-base sm:text-lg truncate">{lesson.student_name}</h3>
-                                                    <p className="text-gray-400 text-xs sm:text-sm font-medium truncate">{lesson.student_email}</p>
+                                            )}
+                                            <div className="flex items-start justify-between flex-wrap gap-3 sm:gap-4">
+                                                <div className="flex items-center gap-3 sm:gap-4">
+                                                    <div className={`w-10 h-10 sm:w-12 sm:h-12 rounded-xl flex items-center justify-center shrink-0 ${isPending ? 'bg-amber-100 text-amber-700' : 'bg-indigo-50 text-indigo-500'}`}>
+                                                        <User size={20} />
+                                                    </div>
+                                                    <div className="min-w-0">
+                                                        <h3 className="font-black text-gray-900 text-base sm:text-lg truncate">{lesson.student_name}</h3>
+                                                        <p className="text-gray-400 text-xs sm:text-sm font-medium truncate">{lesson.student_email}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                                    <AddToCalendar 
+                                                        title={`Spanish Lesson: ${lesson.student_name}`}
+                                                        startTime={lesson.start_time}
+                                                        durationMinutes={lesson.duration}
+                                                        description={`Spanish lesson with ${lesson.student_name} (${lesson.student_email}). \n\nMeeting link: https://meet.google.com/pyv-dxwi-mxc`}
+                                                        location="https://meet.google.com/pyv-dxwi-mxc"
+                                                        className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 transition-all"
+                                                    />
+                                                    {isPending ? (
+                                                        <div className="flex items-center gap-2">
+                                                            <button
+                                                                onClick={() => handleAcceptLesson(lesson)}
+                                                                disabled={acceptingId === lesson.id}
+                                                                className="flex items-center gap-1.5 px-3 sm:px-4 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider shadow-sm transition-all hover:scale-[1.02] active:scale-[0.98] disabled:opacity-50"
+                                                                title="Accept this booking and send confirmation to student"
+                                                            >
+                                                                <Check size={14} />
+                                                                {acceptingId === lesson.id ? 'Aceptando...' : 'Aceptar Clase'}
+                                                            </button>
+                                                            <button
+                                                                onClick={() => updateStatus(lesson.id, 'cancelled', lesson)}
+                                                                className="flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-xl text-[11px] sm:text-xs font-black uppercase tracking-wider transition-all"
+                                                                title="Decline / cancel this booking"
+                                                            >
+                                                                <X size={14} />
+                                                                Rechazar
+                                                            </button>
+                                                        </div>
+                                                    ) : (
+                                                        <select
+                                                            value={lesson.status}
+                                                            onChange={(e) => updateStatus(lesson.id, e.target.value, lesson)}
+                                                            className={`px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider border border-transparent shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all ${statusColor(lesson.status)}`}
+                                                        >
+                                                            <option value="pending" className="bg-white text-gray-700">pending</option>
+                                                            <option value="scheduled" className="bg-white text-gray-700">scheduled</option>
+                                                            <option value="completed" className="bg-white text-gray-700">completed</option>
+                                                            <option value="cancelled" className="bg-white text-gray-700">cancelled</option>
+                                                        </select>
+                                                    )}
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2 sm:gap-3">
-                                                <AddToCalendar 
-                                                    title={`Spanish Lesson: ${lesson.student_name}`}
-                                                    startTime={lesson.start_time}
-                                                    durationMinutes={lesson.duration}
-                                                    description={`Spanish lesson with ${lesson.student_name} (${lesson.student_email}). \n\nMeeting link: https://meet.google.com/pyv-dxwi-mxc`}
-                                                    location="https://meet.google.com/pyv-dxwi-mxc"
-                                                    className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 transition-all"
-                                                />
-                                                <select
-                                                    value={lesson.status}
-                                                    onChange={(e) => updateStatus(lesson.id, e.target.value, lesson)}
-                                                    className={`px-2 sm:px-3 py-1.5 rounded-xl text-[10px] sm:text-xs font-black uppercase tracking-wider border border-transparent shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 cursor-pointer transition-all ${statusColor(lesson.status)}`}
-                                                >
-                                                    <option value="pending" className="bg-white text-gray-700">pending</option>
-                                                    <option value="scheduled" className="bg-white text-gray-700">scheduled</option>
-                                                    <option value="completed" className="bg-white text-gray-700">completed</option>
-                                                    <option value="cancelled" className="bg-white text-gray-700">cancelled</option>
-                                                </select>
-                                            </div>
-                                        </div>
                                         <div className="mt-4 sm:mt-5 grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                                             <div className="flex items-center gap-2 text-xs sm:text-sm">
                                                 <Calendar size={14} className="text-gray-400 shrink-0" />
@@ -437,7 +603,8 @@ const TeacherDashboard = () => {
                                             )}
                                         </div>
                                     </div>
-                                ))}
+                                );
+                            })}
                             </div>
                         )}
                     </div>

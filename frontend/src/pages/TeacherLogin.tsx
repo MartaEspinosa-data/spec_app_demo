@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Lock, Mail, KeyRound, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
 import { API_URL } from '../config';
 import { useToast } from '../components/Toast';
@@ -11,7 +11,10 @@ const TeacherLogin = () => {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { addToast } = useToast();
+
+    const redirectTarget = searchParams.get('redirect') || '/teacher/dashboard';
 
     // Check if teacher is already logged in
     useEffect(() => {
@@ -20,13 +23,13 @@ const TeacherLogin = () => {
             try {
                 const parsed = JSON.parse(teacherAuth);
                 if (parsed.access_token) {
-                    navigate('/teacher/dashboard');
+                    navigate(redirectTarget);
                 }
             } catch {
                 localStorage.removeItem('teacher_auth');
             }
         }
-    }, [navigate]);
+    }, [navigate, redirectTarget]);
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -68,7 +71,7 @@ const TeacherLogin = () => {
             const data = await res.json();
             localStorage.setItem('teacher_auth', JSON.stringify(data));
             addToast('success', '¡Bienvenida, Marta! Accediendo al panel...');
-            navigate('/teacher/dashboard');
+            navigate(redirectTarget);
         } catch (err: any) {
             const msg = err.message || 'Error de conexión. Asegúrate de que el servidor esté activo.';
             setError(msg);

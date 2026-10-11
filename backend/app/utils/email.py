@@ -100,6 +100,8 @@ def send_lesson_confirmation(student_email: str, student_name: str, lesson_date:
 
 def send_teacher_notification(student_name: str, lesson_date: str, duration: int, lesson_type: str, student_payment_account: str = ""):
     """Notify Marta about a new booking, including student payment details."""
+    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
+    dashboard_url = f"{frontend_url}/teacher/dashboard?tab=lessons"
     subject = f"🔔 New Booking: {student_name} ({lesson_date})"
 
     payment_info_block = ""
@@ -122,7 +124,12 @@ def send_teacher_notification(student_name: str, lesson_date: str, duration: int
             <p><strong>Type:</strong> {lesson_type}</p>
         </div>
         {payment_info_block}
-        <p>Verify the payment and then accept or reject the lesson on your <a href="http://localhost:5174/teacher/dashboard">Teacher Dashboard</a>.</p>
+        <div style="text-align: center; margin: 24px 0;">
+            <a href="{dashboard_url}" style="display: inline-block; background: #4f46e5; color: white; padding: 14px 28px; border-radius: 10px; text-decoration: none; font-size: 16px; font-weight: bold;">
+                Ver y Aceptar Clase en el Dashboard →
+            </a>
+        </div>
+        <p style="font-size: 13px; color: #6b7280; text-align: center;">Accede a tu panel para aceptar o rechazar la clase: <a href="{dashboard_url}" style="color: #4f46e5;">Teacher Dashboard</a>.</p>
     </div>
     """
 
@@ -308,7 +315,7 @@ def send_student_rejection_email(student_email: str, student_name: str, lesson_d
                 <p style="font-size: 13px; color: #a16207; margin: 8px 0 0 0;">Please allow 5–10 business days for the refund to appear on your statement.</p>
             </div>
             <p style="font-size: 16px; color: #4b5563; text-align: center;">
-                You are welcome to <a href="http://localhost:5174" style="color: #4f46e5; font-weight: bold;">book another time</a> that works for you.
+                You are welcome to <a href="{os.getenv('FRONTEND_URL', 'http://localhost:5173')}" style="color: #4f46e5; font-weight: bold;">book another time</a> that works for you.
             </p>
             <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 24px; margin-top: 32px;">
                 Disculpa las molestias — Profe Marta ❤️

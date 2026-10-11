@@ -466,7 +466,12 @@ def teacher_cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require
     teacher = db.query(teacher_models.Teacher).filter(
         teacher_models.Teacher.id == lesson.teacher_id
     ).first()
-    teacher_email = os.getenv("TEACHER_NOTIFICATION_EMAIL", "")
+    teacher_email = (
+        getattr(teacher, "email", None)
+        or os.getenv("TEACHER_NOTIFICATION_EMAIL")
+        or os.getenv("TEACHER_EMAIL")
+        or "martaespinosagarcia@gmail.com"
+    )
     teacher_name = teacher.name if teacher else user.get("name", "Teacher")
 
     send_teacher_rejection_confirmation_email(
@@ -662,9 +667,14 @@ def update_lesson_feedback(
         )
         lesson_date_str = db_lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if db_lesson.start_time else "TBD"
 
-        # Teacher info (model has no email field, use env var)
+        # Teacher info
         teacher = db_lesson.teacher
-        teacher_email = os.getenv("TEACHER_NOTIFICATION_EMAIL", "")
+        teacher_email = (
+            getattr(teacher, "email", None)
+            or os.getenv("TEACHER_NOTIFICATION_EMAIL")
+            or os.getenv("TEACHER_EMAIL")
+            or "martaespinosagarcia@gmail.com"
+        )
         teacher_name = teacher.name if teacher else "Marta"
 
         # Student info
