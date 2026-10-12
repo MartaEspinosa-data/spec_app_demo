@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useEffect, useState, type MouseEvent } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { CheckCircle, XCircle, Home, ArrowRight, Loader2, Clock, Sparkles } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { API_URL } from '../config';
@@ -13,6 +13,34 @@ export const PaymentSuccess = () => {
 
     const [verifyState, setVerifyState] = useState<VerifyState>('idle');
     const [verifyMessage, setVerifyMessage] = useState('');
+    const navigate = useNavigate();
+
+    /**
+     * Student clicked "Return to main page": ask the backend to verify the
+     * payment and email both the student (payment successful) and the teacher
+     * (student has paid the lesson). `keepalive` lets the request finish even
+     * though we navigate away immediately. The backend only sends once.
+     */
+    const handleReturnHome = (e: MouseEvent) => {
+        e.preventDefault();
+        const lessonId = localStorage.getItem('pending_payment_lesson_id');
+        if (sessionId || lessonId) {
+            fetch(`${API_URL}/lessons/payment-notify`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: sessionId, lesson_id: lessonId }),
+                keepalive: true,
+            })
+                .then(resp => (resp.ok ? resp.json() : null))
+                .then(data => {
+                    if (data && (data.status === 'sent' || data.status === 'already_sent')) {
+                        localStorage.removeItem('pending_payment_lesson_id');
+                    }
+                })
+                .catch(err => console.warn('[PaymentSuccess] payment-notify failed', err));
+        }
+        navigate('/');
+    };
 
     useEffect(() => {
         if (!sessionId) {
@@ -178,6 +206,8 @@ export const PaymentSuccess = () => {
             <div className="w-full max-w-md flex justify-center">
                 <Link 
                     to="/" 
+                    id="payment-success-return-home"
+                    onClick={handleReturnHome}
                     className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-4.5 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl shadow-xl shadow-indigo-600/30 hover:-translate-y-0.5 transition-all active:scale-95"
                 >
                     <Home size={22} />

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
 from app.database import database
 from app.models import lesson as models
@@ -550,41 +551,10 @@ def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
             lesson.payment_method = "stripe"
         lesson.student_payment_account = f"Stripe payment confirmed (session: {session_id})"
 
-        # Send confirmation email to student and teacher notification once upon payment
-        if getattr(lesson, "payment_email_sent", 0) != 1:
-            lesson.payment_email_sent = 1
-            db.commit()
-            db.refresh(lesson)
-            print(f"[VERIFY-PAYMENT] Lesson {lesson.id} payment verified. Sending confirmation emails.")
-
-            student = db.query(student_models.Student).filter(
-                student_models.Student.id == lesson.student_id
-            ).first()
-            if student:
-                lesson_date_str = lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if lesson.start_time else "TBD"
-                from app.utils.email import send_lesson_confirmation, send_teacher_notification
-                
-                # 1. Send payment confirmation email to student
-                send_lesson_confirmation(
-                    student_email=student.email,
-                    student_name=student.name,
-                    lesson_date=lesson_date_str,
-                    duration=lesson.duration,
-                    lesson_type=lesson.lesson_type,
-                    price=lesson.price,
-                )
-
-                # 2. Send notification to teacher
-                send_teacher_notification(
-                    student_name=student.name,
-                    lesson_date=lesson_date_str,
-                    duration=lesson.duration,
-                    lesson_type=lesson.lesson_type,
-                    student_payment_account=f"Stripe session: {session_id}",
-                )
-        else:
-            db.commit()
-            db.refresh(lesson)
+        # NOTE: Emails are NOT sent here. They are sent when the student clicks
+        # "Return to main page" on the success page (POST /payment-notify).
+        db.commit()
+        db.refresh(lesson)
 
         return {
             "status": "confirmed",
@@ -598,6 +568,138 @@ def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
             "message": "Payment verified, but no matching lesson record found. The record may take a moment to appear.",
             "payment_status": payment_status,
         }
+
+
+class PaymentNotifyRequest(BaseModel):
+    session_id: Optional[str] = None
+    lesson_id: Optional[str] = None
+
+
+def _find_paid_session_for_lesson(lesson: models.Lesson) -> Optional[str]:
+    """Return the id of a *paid* Stripe Checkout Session for this lesson, or None."""
+    import stripe
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+
+    # 1. Session already linked to the lesson (webhook / verify-payment)
+    if lesson.stripe_session_id:
+        try:
+            s = stripe.checkout.Session.retrieve(lesson.stripe_session_id)
+            if s.get("payment_status") == "paid":
+                return s.get("id")
+        except stripe.StripeError as e:
+            print(f"[PAYMENT-NOTIFY] Could not retrieve session {lesson.stripe_session_id}: {e}")
+
+    # 2. Payment Link flow: search recent sessions by client_reference_id
+    try:
+        for s in stripe.checkout.Session.list(limit=100).auto_paging_iter():
+            if s.get("client_reference_id") == lesson.id and s.get("payment_status") == "paid":
+                return s.get("id")
+            # Sessions are returned newest first; stop once older than the lesson booking
+            created_at = getattr(lesson, "created_at", None)
+            if created_at and s.get("created"):
+                lesson_ts = (created_at if created_at.tzinfo else created_at.replace(tzinfo=timezone.utc)).timestamp()
+                if s["created"] < lesson_ts - 3600:
+                    break
+    except stripe.StripeError as e:
+        print(f"[PAYMENT-NOTIFY] Could not list sessions: {e}")
+    return None
+
+
+@router.post("/payment-notify")
+def payment_notify(body: PaymentNotifyRequest, db: Session = Depends(database.get_db)):
+    """
+    Called when the student clicks "Return to main page" on the payment success page.
+
+    Verifies the payment with Stripe and then sends (only once per lesson):
+      1. A payment-successful email to the student.
+      2. A "student has paid the lesson" notification to the teacher.
+    """
+    from app.utils.stripe import is_stripe_configured
+    import stripe
+
+    if not is_stripe_configured():
+        raise HTTPException(status_code=503, detail="Stripe is not configured on this server.")
+    if not body.session_id and not body.lesson_id:
+        raise HTTPException(status_code=400, detail="session_id or lesson_id is required.")
+
+    stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
+    lesson: Optional[models.Lesson] = None
+    paid_session_id: Optional[str] = None
+
+    # ── Resolve via Stripe session id (preferred) ──────────────────────────
+    if body.session_id:
+        try:
+            session = stripe.checkout.Session.retrieve(body.session_id)
+        except stripe.StripeError as e:
+            raise HTTPException(status_code=400, detail=f"Invalid or expired session: {str(e)}")
+        if session.get("payment_status") != "paid":
+            return {"status": "pending", "message": "Payment has not been completed yet."}
+
+        paid_session_id = session.get("id")
+        metadata = session.get("metadata", {}) or {}
+        candidate_ids = [metadata.get("booking_id"), session.get("client_reference_id")]
+        lesson = db.query(models.Lesson).filter(models.Lesson.stripe_session_id == paid_session_id).first()
+        for cid in candidate_ids:
+            if not lesson and cid:
+                lesson = db.query(models.Lesson).filter(models.Lesson.id == cid).first()
+
+    # ── Fallback: resolve via lesson id stored before redirecting to Stripe ─
+    if not lesson and body.lesson_id:
+        lesson = db.query(models.Lesson).filter(models.Lesson.id == body.lesson_id).first()
+        if lesson:
+            paid_session_id = _find_paid_session_for_lesson(lesson)
+            if not paid_session_id:
+                return {"status": "pending", "message": "No completed payment found for this lesson yet."}
+
+    if not lesson:
+        raise HTTPException(status_code=404, detail="No lesson found for this payment.")
+
+    # Record payment details
+    if not lesson.stripe_session_id:
+        lesson.stripe_session_id = paid_session_id
+    lesson.payment_method = "stripe"
+    lesson.student_payment_account = f"Stripe payment confirmed (session: {paid_session_id})"
+
+    # Idempotency: send the emails only once per lesson
+    if getattr(lesson, "payment_email_sent", 0) == 1:
+        db.commit()
+        return {"status": "already_sent", "lesson_id": lesson.id}
+
+    lesson.payment_email_sent = 1
+    db.commit()
+    db.refresh(lesson)
+
+    student = db.query(student_models.Student).filter(
+        student_models.Student.id == lesson.student_id
+    ).first()
+    if not student:
+        return {"status": "no_student", "lesson_id": lesson.id}
+
+    from app.utils.email import send_lesson_confirmation, send_teacher_notification
+    lesson_date_str = lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if lesson.start_time else "TBD"
+
+    # 1. Student: payment successful
+    send_lesson_confirmation(
+        student_email=student.email,
+        student_name=student.name,
+        lesson_date=lesson_date_str,
+        duration=lesson.duration,
+        lesson_type=lesson.lesson_type,
+        price=lesson.price,
+    )
+
+    # 2. Teacher: student has paid the lesson
+    send_teacher_notification(
+        student_name=student.name,
+        lesson_date=lesson_date_str,
+        duration=lesson.duration,
+        lesson_type=lesson.lesson_type,
+        student_payment_account=f"✅ Paid via Stripe — {student.email} (session: {paid_session_id})",
+        paid=True,
+    )
+
+    print(f"[PAYMENT-NOTIFY] Lesson {lesson.id}: student and teacher payment emails sent.")
+    return {"status": "sent", "lesson_id": lesson.id}
 
 
 @router.delete("/teacher/{teacher_id}")

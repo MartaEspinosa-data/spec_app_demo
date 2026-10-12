@@ -109,11 +109,23 @@ def send_lesson_confirmation(student_email: str, student_name: str, lesson_date:
     return _send_email(student_email, subject, html_body)
 
 
-def send_teacher_notification(student_name: str, lesson_date: str, duration: int, lesson_type: str, student_payment_account: str = ""):
-    """Notify Marta about a new booking, including student payment details."""
+def send_teacher_notification(student_name: str, lesson_date: str, duration: int, lesson_type: str, student_payment_account: str = "", paid: bool = False):
+    """Notify Marta about a new booking, including student payment details.
+
+    When ``paid`` is True the email states that the student has paid the lesson.
+    """
     frontend_url = os.getenv("FRONTEND_URL", "http://localhost:5173").rstrip("/")
     dashboard_url = f"{frontend_url}/teacher/dashboard?tab=lessons"
-    subject = f"🔔 New Booking: {student_name} ({lesson_date})"
+    if paid:
+        subject = f"💳 {student_name} has paid the lesson ({lesson_date})"
+        heading = "¡Clase pagada! 💳🇪🇸"
+        intro = f"<strong>{student_name}</strong> has paid the lesson successfully via Stripe."
+        payment_note = "Payment confirmed by Stripe."
+    else:
+        subject = f"🔔 New Booking: {student_name} ({lesson_date})"
+        heading = "Nueva Clase Reservada! 🇪🇸"
+        intro = f"You have a new booking from <strong>{student_name}</strong>."
+        payment_note = "The student stated they transferred the payment from this account."
 
     payment_info_block = ""
     if student_payment_account:
@@ -121,14 +133,14 @@ def send_teacher_notification(student_name: str, lesson_date: str, duration: int
         <div style="background: #fefce8; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 20px 0;">
             <p style="font-weight: bold; color: #92400e; margin: 0 0 8px 0;">💳 Student Payment Account:</p>
             <p style="font-size: 18px; font-weight: bold; color: #1f2937; margin: 0; font-family: monospace;">{student_payment_account}</p>
-            <p style="font-size: 12px; color: #a16207; margin: 8px 0 0 0;">The student stated they transferred the payment from this account.</p>
+            <p style="font-size: 12px; color: #a16207; margin: 8px 0 0 0;">{payment_note}</p>
         </div>
         """
 
     html_body = f"""
     <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #e5e7eb; border-radius: 12px; padding: 24px;">
-        <h2 style="color: #4f46e5;">Nueva Clase Reservada! 🇪🇸</h2>
-        <p>You have a new booking from <strong>{student_name}</strong>.</p>
+        <h2 style="color: #4f46e5;">{heading}</h2>
+        <p>{intro}</p>
         <div style="background: #f9fafb; padding: 16px; border-radius: 8px; margin: 20px 0;">
             <p><strong>Date:</strong> {lesson_date}</p>
             <p><strong>Duration:</strong> {duration} mins</p>

@@ -91,6 +91,9 @@ const BookingPage = () => {
 
             // Redirect to Stripe's hosted payment page
             if (stripeUrl) {
+                if (response.data.lesson_id) {
+                    localStorage.setItem('pending_payment_lesson_id', response.data.lesson_id);
+                }
                 window.location.href = stripeUrl;
                 return;
             }
