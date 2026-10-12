@@ -46,7 +46,7 @@ def _send_email(to_email: str, subject: str, html_body: str) -> bool:
 
 def send_lesson_confirmation(student_email: str, student_name: str, lesson_date: str, duration: int, lesson_type: str, price: float = None):
     """Send a payment confirmation email to the student after completing Stripe checkout."""
-    subject = f"💳 ¡Pago Recibido! Tu clase de español está reservada"
+    subject = "💳 Payment Received Successfully — Spanish with Marta"
 
     price_row = ""
     if price is not None:
@@ -61,14 +61,14 @@ def send_lesson_confirmation(student_email: str, student_name: str, lesson_date:
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
         <!-- Header Banner with dark solid background for Outlook/Hotmail -->
         <div style="background-color: #4338ca; background: #4338ca; padding: 36px 24px; text-align: center;">
-            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">¡Pago Recibido! 💳🇪🇸</h1>
-            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Payment confirmed · Your Spanish lesson has been booked</p>
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">Payment Received Successfully 💳</h1>
+            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Thank you! Your payment has been processed</p>
         </div>
         
         <div style="padding: 32px 28px; background-color: #ffffff;">
-            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{student_name}</strong>,</p>
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hi <strong>{student_name}</strong>,</p>
             <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
-                Thank you for your payment! We have received your booking for a Spanish lesson with Profe Marta. Here are your lesson details:
+                Your payment has been received successfully. Thank you for booking a Spanish lesson with Profe Marta! Here are the details of your booking:
             </p>
             
             <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
@@ -94,25 +94,13 @@ def send_lesson_confirmation(student_email: str, student_name: str, lesson_date:
             </div>
 
             <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
-                <p style="font-size: 14px; color: #166534; font-weight: 600; margin: 0;">
-                    ℹ️ Profe Marta will review your lesson booking and confirm it shortly. You will receive an email once the class is accepted.
-                </p>
-            </div>
-            
-            <div style="text-align: center; margin: 32px 0 20px 0;">
-                <a href="{GOOGLE_MEET_LINK}"
-                   style="display: inline-block; background-color: #4f46e5; background: #4f46e5; color: #ffffff !important; padding: 16px 36px;
-                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
-                          box-shadow: 0 4px 12px rgba(79,70,229,0.3);">
-                    📹 Join Google Meet Lesson
-                </a>
-                <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
-                    Meeting link: <a href="{GOOGLE_MEET_LINK}" style="color: #4f46e5; font-weight: 600; text-decoration: underline;">{GOOGLE_MEET_LINK}</a>
+                <p style="font-size: 14px; color: #166534; font-weight: 600; margin: 0; line-height: 1.6;">
+                    📩 You will receive another email as soon as Profe Marta confirms your class for the agreed date and time.
                 </p>
             </div>
             
             <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
-                ¡Nos vemos pronto! — Profe Marta ❤️
+                See you soon! — Profe Marta ❤️
             </p>
         </div>
     </div>
