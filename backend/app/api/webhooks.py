@@ -103,24 +103,43 @@ def _handle_lesson_checkout_completed(db: Session, session_obj: dict, metadata: 
               f"booking_id: {booking_id}, client_reference_id: {client_reference_id}, metadata: {metadata}")
         return
 
-    # Idempotency guard — only process if lesson is still pending
-    if lesson.status != "pending":
-        print(f"[STRIPE WEBHOOK] Lesson {lesson.id} already processed (status={lesson.status}). Skipping.")
+    # Fill in payment details
+    if not lesson.stripe_session_id:
+        lesson.stripe_session_id = stripe_session_id
+    lesson.payment_method = "stripe"
+    # Keep status as 'pending' so teacher can review and accept or cancel in dashboard!
+    if lesson.status != "scheduled" and lesson.status != "cancelled":
+        lesson.status = "pending"
+    lesson.student_payment_account = f"Stripe payment confirmed (session: {stripe_session_id})"
+
+    # Idempotency guard for sending emails
+    if getattr(lesson, "payment_email_sent", 0) == 1:
+        db.commit()
+        print(f"[STRIPE WEBHOOK] Lesson {lesson.id} payment email already sent. Skipping duplicate email.")
         return
 
-    lesson.stripe_session_id = stripe_session_id
-    lesson.payment_method = "stripe"
-    lesson.status = "scheduled"  # payment confirmed — lesson is now scheduled
-
+    lesson.payment_email_sent = 1
     db.commit()
     db.refresh(lesson)
 
-    from app.utils.email import send_teacher_notification
+    from app.utils.email import send_lesson_confirmation, send_teacher_notification
     student = db.query(student_models.Student).filter(
         student_models.Student.id == lesson.student_id
     ).first()
     if student:
         lesson_date_str = lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if lesson.start_time else "TBD"
+        
+        # 1. Send payment confirmation email to student
+        send_lesson_confirmation(
+            student_email=student.email,
+            student_name=student.name,
+            lesson_date=lesson_date_str,
+            duration=lesson.duration,
+            lesson_type=lesson.lesson_type,
+            price=lesson.price,
+        )
+
+        # 2. Send notification to teacher
         send_teacher_notification(
             student_name=student.name,
             lesson_date=lesson_date_str,
@@ -129,7 +148,7 @@ def _handle_lesson_checkout_completed(db: Session, session_obj: dict, metadata: 
             student_payment_account=f"Stripe session: {stripe_session_id}",
         )
 
-    print(f"[STRIPE WEBHOOK] Lesson {lesson.id} payment confirmed via Stripe. Status: {lesson.status}")
+    print(f"[STRIPE WEBHOOK] Lesson {lesson.id} payment confirmed via Stripe. Student and teacher notified.")
 
 
 def _handle_lesson_checkout_expired(db: Session, session_obj: dict):

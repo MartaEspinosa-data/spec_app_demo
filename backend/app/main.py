@@ -21,6 +21,15 @@ scheduler = BackgroundScheduler()
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle for the FastAPI application."""
     # Startup
+    try:
+        from sqlalchemy import text
+        from app.database.database import engine
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE lessons ADD COLUMN payment_email_sent INTEGER DEFAULT 0"))
+            conn.commit()
+    except Exception:
+        pass
+
     scheduler.add_job(check_reminders, 'interval', minutes=5)
     scheduler.add_job(expire_pending_lessons, 'interval', minutes=5)
     scheduler.start()

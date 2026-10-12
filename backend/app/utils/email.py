@@ -16,10 +16,12 @@ TEACHER_EMAIL = os.getenv("TEACHER_NOTIFICATION_EMAIL") or os.getenv("TEACHER_EM
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:
     """Internal helper to send an email via SMTP. Falls back to console logging in demo mode."""
+    safe_subject = subject.encode("ascii", errors="replace").decode("ascii")
     if not SMTP_USER or not SMTP_PASS:
         print(f"[EMAIL DEMO] To: {to_email}")
-        print(f"[EMAIL DEMO] Subject: {subject}")
-        print(f"[EMAIL DEMO] Body preview: {html_body[:200]}...")
+        print(f"[EMAIL DEMO] Subject: {safe_subject}")
+        safe_preview = html_body[:200].encode("ascii", errors="replace").decode("ascii")
+        print(f"[EMAIL DEMO] Body preview: {safe_preview}...")
         return True
 
     try:
@@ -42,22 +44,31 @@ def _send_email(to_email: str, subject: str, html_body: str) -> bool:
         return False
 
 
-def send_lesson_confirmation(student_email: str, student_name: str, lesson_date: str, duration: int, lesson_type: str):
-    """Send a lesson confirmation email with the Google Meet link."""
-    subject = f"🎉 Your Spanish Lesson is Confirmed!"
+def send_lesson_confirmation(student_email: str, student_name: str, lesson_date: str, duration: int, lesson_type: str, price: float = None):
+    """Send a payment confirmation email to the student after completing Stripe checkout."""
+    subject = f"💳 ¡Pago Recibido! Tu clase de español está reservada"
+
+    price_row = ""
+    if price is not None:
+        price_row = f"""
+                    <tr>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">AMOUNT PAID</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">${price:.2f}</td>
+                    </tr>
+        """
 
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
         <!-- Header Banner with dark solid background for Outlook/Hotmail -->
         <div style="background-color: #4338ca; background: #4338ca; padding: 36px 24px; text-align: center;">
-            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">¡Clase Reservada! 🇪🇸</h1>
-            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Your Spanish lesson has been booked</p>
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">¡Pago Recibido! 💳🇪🇸</h1>
+            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Payment confirmed · Your Spanish lesson has been booked</p>
         </div>
         
         <div style="padding: 32px 28px; background-color: #ffffff;">
             <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{student_name}</strong>,</p>
             <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
-                Thank you for booking a lesson with Profe Marta! Here are your lesson details:
+                Thank you for your payment! We have received your booking for a Spanish lesson with Profe Marta. Here are your lesson details:
             </p>
             
             <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
@@ -74,7 +85,18 @@ def send_lesson_confirmation(student_email: str, student_name: str, lesson_date:
                         <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
                         <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
                     </tr>
+                    {price_row}
+                    <tr>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">PAYMENT STATUS</td>
+                        <td style="padding: 10px 0; color: #059669; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">✅ Confirmed (Stripe)</td>
+                    </tr>
                 </table>
+            </div>
+
+            <div style="background-color: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 12px; padding: 16px 20px; margin: 20px 0;">
+                <p style="font-size: 14px; color: #166534; font-weight: 600; margin: 0;">
+                    ℹ️ Profe Marta will review your lesson booking and confirm it shortly. You will receive an email once the class is accepted.
+                </p>
             </div>
             
             <div style="text-align: center; margin: 32px 0 20px 0;">

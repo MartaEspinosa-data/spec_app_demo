@@ -257,25 +257,18 @@ def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.g
         db.commit()
         db.refresh(db_lesson)
 
-    # 6. Send confirmation email to student immediately upon booking
-    from app.utils.email import send_lesson_confirmation, send_teacher_notification
-    send_lesson_confirmation(
-        student_email=db_student.email,
-        student_name=db_student.name,
-        lesson_date=lesson_date_str,
-        duration=db_lesson.duration,
-        lesson_type=db_lesson.lesson_type
-    )
-
-    # 6b. Send teacher notification immediately — don't wait for webhook
-    payment_account_info = "Stripe payment — waiting for checkout completion" if db_lesson.payment_method == "stripe" else f"Manual payment — student email: {db_student.email}"
-    send_teacher_notification(
-        student_name=db_student.name,
-        lesson_date=lesson_date_str,
-        duration=db_lesson.duration,
-        lesson_type=db_lesson.lesson_type,
-        student_payment_account=payment_account_info,
-    )
+    # 6. For manual payments, notify the teacher immediately.
+    # For Stripe payments, both student payment confirmation and teacher notification
+    # are sent after payment completes (via webhook or verify-payment).
+    if db_lesson.payment_method == "manual":
+        from app.utils.email import send_teacher_notification
+        send_teacher_notification(
+            student_name=db_student.name,
+            lesson_date=lesson_date_str,
+            duration=db_lesson.duration,
+            lesson_type=db_lesson.lesson_type,
+            student_payment_account=f"Manual payment — student email: {db_student.email}",
+        )
 
     # 7. Return response — includes the Stripe Checkout URL if configured
     return {
@@ -550,28 +543,38 @@ def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
         ).first()
 
     if lesson:
-        was_pending = lesson.status == "pending"
-
-        # Always fill in the stripe_session_id if missing
+        # Fill in the stripe_session_id and payment details
         if not lesson.stripe_session_id:
             lesson.stripe_session_id = session_id
         if not lesson.payment_method or lesson.payment_method == "manual":
             lesson.payment_method = "stripe"
+        lesson.student_payment_account = f"Stripe payment confirmed (session: {session_id})"
 
-        # Promote from pending → scheduled when payment is confirmed
-        if lesson.status == "pending":
-            lesson.status = "scheduled"
+        # Send confirmation email to student and teacher notification once upon payment
+        if getattr(lesson, "payment_email_sent", 0) != 1:
+            lesson.payment_email_sent = 1
             db.commit()
             db.refresh(lesson)
-            print(f"[VERIFY-PAYMENT] Lesson {lesson.id} promoted pending→scheduled via fallback.")
+            print(f"[VERIFY-PAYMENT] Lesson {lesson.id} payment verified. Sending confirmation emails.")
 
-            # Send teacher notification (webhook may have been missed)
-            from app.utils.email import send_teacher_notification
             student = db.query(student_models.Student).filter(
                 student_models.Student.id == lesson.student_id
             ).first()
             if student:
                 lesson_date_str = lesson.start_time.strftime("%A, %B %d at %I:%M %p UTC") if lesson.start_time else "TBD"
+                from app.utils.email import send_lesson_confirmation, send_teacher_notification
+                
+                # 1. Send payment confirmation email to student
+                send_lesson_confirmation(
+                    student_email=student.email,
+                    student_name=student.name,
+                    lesson_date=lesson_date_str,
+                    duration=lesson.duration,
+                    lesson_type=lesson.lesson_type,
+                    price=lesson.price,
+                )
+
+                # 2. Send notification to teacher
                 send_teacher_notification(
                     student_name=student.name,
                     lesson_date=lesson_date_str,
@@ -579,9 +582,7 @@ def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
                     lesson_type=lesson.lesson_type,
                     student_payment_account=f"Stripe session: {session_id}",
                 )
-        elif not was_pending and lesson.stripe_session_id != session_id:
-            # Lesson already had a different session_id; update it
-            lesson.stripe_session_id = session_id
+        else:
             db.commit()
             db.refresh(lesson)
 
