@@ -40,6 +40,8 @@ function App() {
               <Route path="/teacher/reset-password" element={<ForgotPassword role="teacher" />} />
               <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
               <Route path="/payment-success" element={<PaymentSuccess />} />
+              <Route path="/thank-you" element={<PaymentSuccess />} />
+              <Route path="/gracias" element={<PaymentSuccess />} />
               <Route path="/payment-cancelled" element={<PaymentCancelled />} />
               <Route path="/legal" element={<LegalNotice />} />
               <Route path="/privacy" element={<PrivacyPolicy />} />

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, Link } from 'react-router-dom';
 import { API_URL } from '../config';
 import { teacherService } from '../services/teacherService';
 import type { Teacher } from '../services/teacherService';
@@ -115,11 +115,17 @@ const BookingPage = () => {
     return (
         <div className="bg-[#f8faff] min-h-screen pb-24 sm:pb-32">
             <header className="bg-white/80 backdrop-blur-md shadow-sm fixed top-0 w-full z-50 border-b border-gray-100">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-5 flex items-center justify-between">
-                    <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-indigo-600 transition flex items-center gap-1 font-bold tracking-tight text-sm sm:text-base">
-                        <ChevronLeft size={18} />
-                        <span className="hidden sm:inline">{t('booking.cancel')}</span>
-                    </button>
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <button onClick={() => navigate(-1)} className="text-gray-500 hover:text-indigo-600 transition flex items-center gap-1 font-bold tracking-tight text-sm sm:text-base mr-2">
+                            <ChevronLeft size={18} />
+                            <span className="hidden sm:inline">{t('booking.cancel')}</span>
+                        </button>
+                        <Link to="/" className="flex items-center gap-2 group">
+                            <img src="/icon.png" alt="Marta Spanish Teacher" className="h-8 sm:h-9 w-auto object-contain transition-transform group-hover:scale-105" />
+                            <span className="font-black text-[#233b5d] tracking-tight hidden md:inline">Marta <span className="text-xs text-[#cb7561] font-bold">Spanish Teacher</span></span>
+                        </Link>
+                    </div>
                     <div className="flex items-center gap-2 sm:gap-4">
                         <span className="px-3 sm:px-5 py-1.5 sm:py-2 bg-indigo-50 text-indigo-600 text-xs sm:text-sm font-black uppercase tracking-widest rounded-full border border-indigo-100 shadow-sm">
                             {t('booking.priceLocked', { price: String(teacher.price_per_hour) })}

@@ -124,7 +124,10 @@ const DashboardPage = () => {
         <div className="flex flex-col gap-8">
             <div>
                 <div className="flex items-center justify-between mb-4">
-                    <div className="text-lg font-black text-indigo-600 tracking-tighter uppercase">{t('dashboard.studentTitle')}</div>
+                    <Link to="/" className="flex items-center gap-2 group">
+                        <img src="/icon.png" alt="Marta Spanish Teacher" className="h-7 w-auto object-contain transition-transform group-hover:scale-105" />
+                        <span className="text-sm font-black text-[#233b5d] tracking-tight">{t('dashboard.studentTitle')}</span>
+                    </Link>
                     <div className="flex items-center gap-3">
                         <LanguageSelector />
                         <Link to="/" className="text-gray-400 hover:text-indigo-600 transition" title="Home">

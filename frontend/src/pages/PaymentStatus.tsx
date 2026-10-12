@@ -1,10 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { CheckCircle, XCircle, Home, ArrowRight, Video, Loader2, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Home, ArrowRight, Loader2, Clock, Sparkles } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { API_URL } from '../config';
-
-const GOOGLE_MEET_LINK = "https://meet.google.com/pyv-dxwi-mxc";
 
 type VerifyState = 'idle' | 'verifying' | 'confirmed' | 'timeout';
 
@@ -83,107 +81,106 @@ export const PaymentSuccess = () => {
     }, [sessionId]);
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-green-50 px-4 sm:px-6 text-center">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-green-50/70 via-white to-indigo-50/30 px-4 sm:px-6 text-center py-12 sm:py-16">
+            <Link to="/" className="mb-6 hover:opacity-90 transition inline-block">
+                <img src="/logo.png" alt="Marta Spanish Teacher" className="h-16 w-auto object-contain mx-auto" />
+            </Link>
+
             {/* Verification indicator */}
             {verifyState === 'verifying' && (
-                <div className="flex flex-col items-center gap-4 mb-8">
+                <div className="flex flex-col items-center gap-4 mb-8 bg-white p-8 rounded-3xl shadow-xl border border-amber-100 max-w-md w-full">
                     <div className="w-16 h-16 rounded-full bg-amber-50 border-2 border-amber-200 flex items-center justify-center">
                         <Loader2 size={32} className="text-amber-500 animate-spin" />
                     </div>
-                    <h1 className="text-2xl sm:text-4xl font-black text-gray-900 tracking-tight">
+                    <h1 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tight">
                         {t('payment.success.verifying')}
                     </h1>
-                    <p className="text-sm sm:text-base text-gray-500 max-w-sm">
+                    <p className="text-sm text-gray-500 max-w-sm">
                         {t('payment.success.verifyingSubtitle')}
                     </p>
                     {verifyMessage && (
-                        <p className="text-xs text-gray-400 animate-pulse">{verifyMessage}</p>
+                        <p className="text-xs text-gray-400 animate-pulse font-medium">{verifyMessage}</p>
                     )}
                 </div>
             )}
 
             {/* Confirmed state */}
             {(verifyState === 'confirmed' || verifyState === 'idle') && (
-                <>
-                    <CheckCircle size={80} className="text-green-500 mb-6 sm:mb-8 animate-bounce" />
-                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">{t('payment.success.title')}</h1>
-                    <p className="text-base sm:text-xl text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto font-medium px-2">
+                <div className="flex flex-col items-center max-w-xl w-full">
+                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-100/80 text-emerald-800 rounded-full font-bold text-xs uppercase tracking-wider mb-5">
+                        <Sparkles size={15} className="text-emerald-600" />
+                        {t('payment.success.badge')}
+                    </div>
+
+                    <div className="w-20 h-20 sm:w-24 sm:h-24 bg-gradient-to-tr from-emerald-500 to-green-400 text-white rounded-full flex items-center justify-center shadow-lg shadow-emerald-500/25 mb-6">
+                        <CheckCircle size={44} className="stroke-[2.5]" />
+                    </div>
+
+                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">
+                        {t('payment.success.title')}
+                    </h1>
+
+                    <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-lg mx-auto font-medium leading-relaxed">
                         {t('payment.success.subtitle')}
                     </p>
 
-                    {/* Google Meet Link Card */}
-                    <div className="bg-white p-8 rounded-3xl shadow-xl border border-green-100 mb-8 max-w-md w-full">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
-                                <Video size={24} className="text-indigo-600" />
-                            </div>
-                            <div className="text-left">
-                                <h3 className="font-black text-gray-900">Your Lesson Link</h3>
-                                <p className="text-sm text-gray-500">Use this link to join your lesson</p>
-                            </div>
-                        </div>
-                        <a 
-                            href={GOOGLE_MEET_LINK}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3"
-                        >
-                            📹 Join Google Meet
-                        </a>
-                        <p className="text-xs text-gray-400 mt-3 font-mono break-all">{GOOGLE_MEET_LINK}</p>
+                    {/* Next steps checklist */}
+                    <div className="bg-emerald-50/70 border border-emerald-100 rounded-3xl p-6 sm:p-8 mb-6 w-full text-left">
+                        <h4 className="font-black text-emerald-900 text-xs sm:text-sm uppercase tracking-wider mb-3 flex items-center gap-2">
+                            <span>📋</span> {t('payment.success.nextStepsTitle')}
+                        </h4>
+                        <ul className="space-y-2.5 text-xs sm:text-sm text-emerald-950/80 font-medium">
+                            <li className="flex items-start gap-2.5">
+                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span>{t('payment.success.step1')}</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span>{t('payment.success.step2')}</span>
+                            </li>
+                            <li className="flex items-start gap-2.5">
+                                <span className="text-emerald-600 font-bold shrink-0">✓</span>
+                                <span>{t('payment.success.step3')}</span>
+                            </li>
+                        </ul>
                     </div>
 
-                    <p className="text-sm text-gray-500 font-medium mb-8 max-w-md">
-                        📧 A confirmation email with the lesson link has been sent to your inbox.
+                    <p className="text-xs sm:text-sm text-gray-500 font-medium mb-8 max-w-md">
+                        📩 {t('payment.success.emailNotice')}
                     </p>
-                </>
+                </div>
             )}
 
-            {/* Timeout state — payment went through but we couldn't verify */}
+            {/* Timeout state — payment went through but we couldn't verify immediately */}
             {verifyState === 'timeout' && (
-                <>
-                    <Clock size={80} className="text-amber-500 mb-6 sm:mb-8" />
-                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">{t('payment.success.title')}</h1>
-                    <p className="text-base sm:text-xl text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto font-medium px-2">
+                <div className="flex flex-col items-center max-w-xl w-full">
+                    <Clock size={72} className="text-amber-500 mb-6" />
+                    <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">
+                        {t('payment.success.title')}
+                    </h1>
+                    <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-lg mx-auto font-medium leading-relaxed">
                         {t('payment.success.verifyingTimeout')}
                     </p>
 
-                    {/* Google Meet Link Card */}
-                    <div className="bg-white p-8 rounded-3xl shadow-xl border border-amber-100 mb-8 max-w-md w-full">
-                        <div className="flex items-center gap-3 mb-4">
-                            <div className="w-12 h-12 bg-indigo-50 rounded-xl flex items-center justify-center">
-                                <Video size={24} className="text-indigo-600" />
-                            </div>
-                            <div className="text-left">
-                                <h3 className="font-black text-gray-900">Your Lesson Link</h3>
-                                <p className="text-sm text-gray-500">Use this link to join your lesson</p>
-                            </div>
-                        </div>
-                        <a 
-                            href={GOOGLE_MEET_LINK}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg shadow-lg hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-3"
-                        >
-                            📹 Join Google Meet
-                        </a>
-                        <p className="text-xs text-gray-400 mt-3 font-mono break-all">{GOOGLE_MEET_LINK}</p>
-                    </div>
-
-                    <p className="text-sm text-gray-500 font-medium mb-8 max-w-md">
-                        📧 A confirmation email with the lesson link will be sent to your inbox shortly.
+                    <p className="text-xs sm:text-sm text-gray-500 font-medium mb-8 max-w-md">
+                        📩 {t('payment.success.emailNotice')}
                     </p>
-                </>
+                </div>
             )}
 
             {sessionId && (
-                <div className="bg-white p-4 rounded-xl shadow-inner mb-8 font-mono text-sm text-gray-400 border border-green-100">
+                <div className="bg-white/80 px-4 py-2 rounded-xl text-xs font-mono text-gray-400 mb-8 border border-gray-200">
                     ID: {sessionId}
                 </div>
             )}
-            <div className="flex flex-col sm:flex-row gap-4">
-                <Link to="/" className="flex items-center gap-3 px-10 py-5 bg-white text-gray-700 text-xl font-bold rounded-2xl hover:bg-gray-100 transition-all shadow-md active:scale-95">
-                    <Home size={24} />
+
+            {/* Navigation button: Volver a la página principal en color */}
+            <div className="w-full max-w-md flex justify-center">
+                <Link 
+                    to="/" 
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-4.5 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl shadow-xl shadow-indigo-600/30 hover:-translate-y-0.5 transition-all active:scale-95"
+                >
+                    <Home size={22} />
                     {t('payment.success.home')}
                 </Link>
             </div>
@@ -195,7 +192,10 @@ export const PaymentCancelled = () => {
     const { t } = useLanguage();
 
     return (
-        <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 px-4 sm:px-6 text-center">
+        <div className="flex flex-col items-center justify-center min-h-screen bg-red-50 px-4 sm:px-6 text-center py-12">
+            <Link to="/" className="mb-6 hover:opacity-90 transition inline-block">
+                <img src="/logo.png" alt="Marta Spanish Teacher" className="h-16 w-auto object-contain mx-auto" />
+            </Link>
             <XCircle size={80} className="text-red-500 mb-6 sm:mb-8" />
             <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">{t('payment.cancelled.title')}</h1>
             <p className="text-base sm:text-xl text-gray-600 mb-8 sm:mb-12 max-w-md mx-auto font-medium px-2">

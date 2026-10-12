@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Calendar, Zap, MessageCircleQuestion, CheckCircle2, Play, Info, Menu, X } from 'lucide-react';
+import { Sparkles, Calendar, Zap, CheckCircle2, Play, Info, Menu, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL, TEACHER_ID } from '../config';
@@ -148,10 +148,21 @@ const LandingPage = () => {
         <div className="bg-[#f0f2f5] min-h-screen">
             <header className="fixed top-0 left-0 w-full bg-white/80 backdrop-blur-md shadow-sm z-50 transition-all border-b border-gray-100">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex justify-between items-center">
-                    <div className="text-xl sm:text-2xl font-black text-indigo-600 tracking-tighter uppercase flex items-center gap-2">
-                        <MessageCircleQuestion size={24} className="text-indigo-600" />
-                        <span className="hidden sm:inline">{t('nav.brand')}</span>
-                    </div>
+                    <Link to="/" className="flex items-center gap-2.5 sm:gap-3 group">
+                        <img 
+                            src="/icon.png" 
+                            alt="Marta Spanish Teacher" 
+                            className="h-10 sm:h-12 w-auto object-contain transition-transform group-hover:scale-105" 
+                        />
+                        <div className="flex flex-col text-left">
+                            <span className="text-lg sm:text-xl font-black text-[#233b5d] tracking-tight leading-none group-hover:text-indigo-600 transition-colors">
+                                Marta
+                            </span>
+                            <span className="text-[10px] sm:text-xs font-bold text-[#cb7561] tracking-wider uppercase leading-none mt-1">
+                                Spanish Teacher
+                            </span>
+                        </div>
+                    </Link>
                     
                     {/* Desktop Nav */}
                     <div className="hidden lg:flex gap-3 items-center">
@@ -461,10 +472,13 @@ const LandingPage = () => {
                 {/* Footer */}
                 <footer className="max-w-7xl mx-auto pt-16 sm:pt-20 pb-10 border-t border-gray-100 flex flex-col gap-6 sm:gap-8 px-4">
                     <div className="flex flex-col md:flex-row justify-between items-center gap-6 sm:gap-8">
-                        <div className="flex items-center gap-3 text-xl sm:text-2xl font-black text-gray-900">
-                            <MessageCircleQuestion size={28} className="text-indigo-600" />
-                            {t('nav.brand')}
-                        </div>
+                        <Link to="/" className="hover:opacity-90 transition inline-block">
+                            <img 
+                                src="/logo.png" 
+                                alt="Marta Spanish Teacher" 
+                                className="h-16 sm:h-20 w-auto object-contain" 
+                            />
+                        </Link>
                         
                         <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-8">
                             <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-gray-400">

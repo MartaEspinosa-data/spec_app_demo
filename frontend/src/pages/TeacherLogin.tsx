@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, Link, useSearchParams } from 'react-router-dom';
-import { Lock, Mail, KeyRound, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
+import { Mail, KeyRound, Eye, EyeOff, Sparkles, ArrowRight } from 'lucide-react';
 import { API_URL } from '../config';
 import { useToast } from '../components/Toast';
 
@@ -94,10 +94,14 @@ const TeacherLogin = () => {
             <div className="absolute bottom-10 right-10 w-96 h-96 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
 
             <div className="bg-white/95 backdrop-blur-xl p-8 sm:p-12 rounded-[2.5rem] shadow-2xl border border-white/20 w-full max-w-md relative z-10">
-                <div className="text-center mb-8">
-                    <div className="w-16 h-16 bg-gradient-to-tr from-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-indigo-500/30 transform hover:scale-105 transition-transform">
-                        <Lock size={30} className="text-white" />
-                    </div>
+                <div className="text-center mb-6">
+                    <Link to="/" className="inline-block hover:opacity-90 transition mb-3">
+                        <img 
+                            src="/logo.png" 
+                            alt="Marta Spanish Teacher" 
+                            className="h-20 w-auto object-contain mx-auto" 
+                        />
+                    </Link>
                     
                     <h1 className="text-3xl font-black text-gray-900 tracking-tight">Teacher Portal</h1>
                     <p className="text-gray-500 font-medium text-sm mt-1">

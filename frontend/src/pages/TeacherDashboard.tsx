@@ -294,7 +294,13 @@ const TeacherDashboard = () => {
     const SidebarContent = () => (
         <div className="flex flex-col gap-8">
             <div className="flex items-center justify-between">
-                <div className="text-xl font-black text-indigo-600 tracking-tighter uppercase">Teacher</div>
+                <Link to="/" className="flex items-center gap-2 group">
+                    <img src="/icon.png" alt="Marta Spanish Teacher" className="h-8 w-auto object-contain transition-transform group-hover:scale-105" />
+                    <div className="flex flex-col text-left">
+                        <span className="text-sm font-black text-[#233b5d] tracking-tight leading-none">Marta</span>
+                        <span className="text-[9px] font-bold text-[#cb7561] tracking-wider uppercase leading-none mt-0.5">Teacher</span>
+                    </div>
+                </Link>
                 <div className="flex items-center gap-4">
                     <LanguageSelector />
                     <Link to="/" className="text-gray-400 hover:text-indigo-600 transition flex items-center gap-1 font-bold text-sm" title="Return to Site">

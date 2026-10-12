@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight, ArrowLeft, BookOpen, RefreshCw } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
 import { API_URL } from '../config';
 import { useToast } from '../components/Toast';
 import { GoogleLogin } from '@react-oauth/google';
@@ -143,9 +143,12 @@ const StudentLogin = () => {
                 </div>
 
                 <div className="text-center mb-6 sm:mb-10">
-                    <Link to="/" className="inline-flex items-center gap-2 text-indigo-600 font-black text-xl sm:text-2xl tracking-tighter uppercase hover:text-indigo-700 transition">
-                        <BookOpen size={24} />
-                        SPANISH WITH MARTA
+                    <Link to="/" className="inline-flex flex-col items-center hover:opacity-90 transition mb-2">
+                        <img 
+                            src="/logo.png" 
+                            alt="Marta Spanish Teacher" 
+                            className="h-20 sm:h-24 w-auto object-contain mx-auto" 
+                        />
                     </Link>
                     <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mt-4 sm:mt-6 mb-2">
                         {registeredEmail ? 'Check Your Email' : isRegister ? 'Create Account' : 'Student Login'}
