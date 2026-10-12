@@ -113,10 +113,10 @@ def _handle_lesson_checkout_completed(db: Session, session_obj: dict, metadata: 
     lesson.student_payment_account = f"Stripe payment confirmed (session: {stripe_session_id})"
     db.commit()
 
-    # NOTE: Payment emails (student + teacher) are NOT sent from the webhook.
-    # They are sent when the student clicks "Return to main page" on the
-    # payment success page (POST /api/v1/lessons/payment-notify).
-    print(f"[STRIPE WEBHOOK] Lesson {lesson.id} payment recorded via Stripe.")
+    # Send notifications to student & teacher (guaranteed idempotent)
+    from app.api.lessons import process_paid_lesson_notifications
+    process_paid_lesson_notifications(lesson, db, paid_session_id=stripe_session_id)
+    print(f"[STRIPE WEBHOOK] Lesson {lesson.id} payment recorded via Stripe and notifications triggered.")
 
 
 def _handle_lesson_checkout_expired(db: Session, session_obj: dict):

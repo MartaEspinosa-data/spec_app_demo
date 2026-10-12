@@ -44,7 +44,22 @@ export const PaymentSuccess = () => {
 
     useEffect(() => {
         if (!sessionId) {
-            // No session_id to verify — show the standard success page
+            // No session_id to verify directly from URL — check pending_payment_lesson_id
+            const lessonId = localStorage.getItem('pending_payment_lesson_id');
+            if (lessonId) {
+                fetch(`${API_URL}/lessons/payment-notify`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ lesson_id: lessonId }),
+                })
+                    .then(resp => (resp.ok ? resp.json() : null))
+                    .then(data => {
+                        if (data && (data.status === 'sent' || data.status === 'already_sent')) {
+                            localStorage.removeItem('pending_payment_lesson_id');
+                        }
+                    })
+                    .catch(() => {});
+            }
             setVerifyState('confirmed');
             return;
         }
