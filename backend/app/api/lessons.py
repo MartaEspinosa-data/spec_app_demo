@@ -163,6 +163,7 @@ def get_teacher_lessons(teacher_id: str, user: Dict[str, Any] = Depends(require_
             "duration": l.duration,
             "price": l.price,
             "status": l.status,
+            "meeting_link": l.meeting_link or "https://meet.google.com/pyv-dxwi-mxc",
             "payment_method": l.payment_method or "manual",
             "stripe_payment_link_url": l.stripe_payment_link_url or "",
             "stripe_session_id": l.stripe_session_id or "",
@@ -172,6 +173,64 @@ def get_teacher_lessons(teacher_id: str, user: Dict[str, Any] = Depends(require_
             "student_payment_account": l.student_payment_account or "",
         })
     return {"lessons": result}
+
+
+LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
+LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
+LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
+
+
+@router.get("/{lesson_id}/livekit-token")
+def get_livekit_token(
+    lesson_id: str,
+    user_name: Optional[str] = None,
+    identity: Optional[str] = None,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Generate a LiveKit JWT access token for the classroom session.
+    """
+    try:
+        from livekit import api
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="LiveKit SDK is not installed. Please run: pip install livekit-api",
+        )
+    import uuid
+
+    api_key = os.getenv("LIVEKIT_API_KEY", "devkey")
+    api_secret = os.getenv("LIVEKIT_API_SECRET", "secret")
+    server_url = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
+
+    room_name = f"marta_lesson_{lesson_id}"
+    participant_identity = identity or f"user_{uuid.uuid4().hex[:8]}"
+    participant_name = user_name or "Participante"
+
+    grant = api.VideoGrants(
+        room_join=True,
+        room=room_name,
+        can_publish=True,
+        can_subscribe=True,
+        can_publish_data=True,
+    )
+    token = (
+        api.AccessToken(api_key, api_secret)
+        .with_identity(participant_identity)
+        .with_name(participant_name)
+        .with_grants(grant)
+        .with_ttl(timedelta(hours=4))
+        .to_jwt()
+    )
+
+    return {
+        "token": token,
+        "server_url": server_url,
+        "room_name": room_name,
+        "participant_name": participant_name,
+        "participant_identity": participant_identity,
+    }
+
 
 @router.post("/", response_model=dict)
 def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.get_db)):
@@ -511,6 +570,8 @@ def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
 
     try:
         session = stripe.checkout.Session.retrieve(session_id)
+        if hasattr(session, "to_dict"):
+            session = session.to_dict()
     except stripe.StripeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid or expired session: {str(e)}")
 
@@ -645,6 +706,8 @@ def _find_paid_session_for_lesson(lesson: models.Lesson) -> Optional[str]:
     if lesson.stripe_session_id:
         try:
             s = stripe.checkout.Session.retrieve(lesson.stripe_session_id)
+            if hasattr(s, "to_dict"):
+                s = s.to_dict()
             if s.get("payment_status") == "paid":
                 return s.get("id")
         except stripe.StripeError as e:
@@ -653,13 +716,14 @@ def _find_paid_session_for_lesson(lesson: models.Lesson) -> Optional[str]:
     # 2. Payment Link flow: search recent sessions by client_reference_id
     try:
         for s in stripe.checkout.Session.list(limit=100).auto_paging_iter():
-            if s.get("client_reference_id") == lesson.id and s.get("payment_status") == "paid":
-                return s.get("id")
+            s_dict = s.to_dict() if hasattr(s, "to_dict") else s
+            if s_dict.get("client_reference_id") == lesson.id and s_dict.get("payment_status") == "paid":
+                return s_dict.get("id")
             # Sessions are returned newest first; stop once older than the lesson booking
             created_at = getattr(lesson, "created_at", None)
-            if created_at and s.get("created"):
+            if created_at and s_dict.get("created"):
                 lesson_ts = (created_at if created_at.tzinfo else created_at.replace(tzinfo=timezone.utc)).timestamp()
-                if s["created"] < lesson_ts - 3600:
+                if s_dict["created"] < lesson_ts - 3600:
                     break
     except stripe.StripeError as e:
         print(f"[PAYMENT-NOTIFY] Could not list sessions: {e}")
@@ -691,6 +755,8 @@ def payment_notify(body: PaymentNotifyRequest, db: Session = Depends(database.ge
     if body.session_id:
         try:
             session = stripe.checkout.Session.retrieve(body.session_id)
+            if hasattr(session, "to_dict"):
+                session = session.to_dict()
         except stripe.StripeError as e:
             raise HTTPException(status_code=400, detail=f"Invalid or expired session: {str(e)}")
         if session.get("payment_status") != "paid":
@@ -803,8 +869,7 @@ def update_lesson_feedback(
         student_name = student.name if student else "Student"
 
         if old_status == "pending" and new_status == "scheduled":
-            # Teacher manually accepted a non-stripe/manual lesson
-            # (Payment-backed lessons skip this path entirely; the webhook auto-schedules them)
+            # Teacher accepted the lesson (either manual booking or Stripe-paid booking)
             if student_email:
                 send_student_acceptance_email(
                     student_email=student_email,
@@ -812,6 +877,7 @@ def update_lesson_feedback(
                     lesson_date=lesson_date_str,
                     duration=db_lesson.duration,
                     lesson_type=db_lesson.lesson_type,
+                    lesson_id=str(db_lesson.id),
                 )
             send_teacher_acceptance_email(
                 teacher_email=teacher_email,
@@ -819,6 +885,7 @@ def update_lesson_feedback(
                 student_name=student_name,
                 lesson_date=lesson_date_str,
                 lesson_type=db_lesson.lesson_type,
+                lesson_id=str(db_lesson.id),
             )
 
         elif old_status == "pending" and new_status == "cancelled":
@@ -871,3 +938,33 @@ def update_lesson_feedback(
             )
 
     return db_lesson
+
+
+# NOTE: Keep this catch-all route LAST so it doesn't shadow static GET routes like /price.
+@router.get("/{lesson_id}")
+def get_lesson(lesson_id: str, db: Session = Depends(database.get_db)):
+    """Fetch lesson details for classroom view."""
+    lesson = db.query(models.Lesson).options(
+        joinedload(models.Lesson.student),
+        joinedload(models.Lesson.teacher),
+    ).filter(models.Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    return {
+        "id": lesson.id,
+        "teacher_id": lesson.teacher_id,
+        "teacher_name": lesson.teacher.name if lesson.teacher else "Marta",
+        "student_id": lesson.student_id,
+        "student_name": lesson.student.name if lesson.student else "Student",
+        "student_email": lesson.student.email if lesson.student else "",
+        "lesson_type": lesson.lesson_type,
+        "start_time": (lesson.start_time.isoformat() + "Z") if lesson.start_time else None,
+        "duration": lesson.duration,
+        "price": lesson.price,
+        "status": lesson.status,
+        "meeting_link": lesson.meeting_link or "https://meet.google.com/pyv-dxwi-mxc",
+        "feedback_vocabulary": lesson.feedback_vocabulary or "",
+        "feedback_errors": lesson.feedback_errors or "",
+        "feedback_materials": lesson.feedback_materials or "",
+    }

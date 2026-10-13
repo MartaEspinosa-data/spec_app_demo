@@ -1,4 +1,8 @@
-﻿# spec_app_demo Development Guidelines
+---
+description: spec_app_demo Development Guidelines
+---
+
+# spec_app_demo Development Guidelines
 
 Auto-generated from all feature plans. Last updated: 2026-03-09
 

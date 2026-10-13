@@ -46,7 +46,9 @@ async def stripe_webhook(request: Request, db: Session = Depends(database.get_db
 
     event_type = event["type"]
     session_obj = event["data"]["object"]
-    metadata = session_obj.get("metadata", {})
+    if hasattr(session_obj, "to_dict"):
+        session_obj = session_obj.to_dict()
+    metadata = session_obj.get("metadata", {}) or {}
     payment_type = metadata.get("payment_type", "lesson") if metadata else "lesson"
     print(f"[STRIPE WEBHOOK] Received event: {event_type} (payment_type={payment_type})")
 
@@ -121,6 +123,8 @@ def _handle_lesson_checkout_completed(db: Session, session_obj: dict, metadata: 
 
 def _handle_lesson_checkout_expired(db: Session, session_obj: dict):
     """Handle expired checkout for a single lesson."""
+    if hasattr(session_obj, "to_dict"):
+        session_obj = session_obj.to_dict()
     stripe_session_id = session_obj.get("id")
     if stripe_session_id:
         lesson = db.query(lesson_models.Lesson).filter(

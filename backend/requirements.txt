@@ -20,3 +20,7 @@ tzdata>=2024.0
 # Database (for SQLite, included; for Postgres, add psycopg2-binary and psycopg)
 psycopg2-binary>=2.9.0
 psycopg[binary]>=3.1.0
+
+# WebRTC Video Calling
+livekit-api>=1.2.0
+

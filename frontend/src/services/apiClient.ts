@@ -20,9 +20,12 @@ apiClient.interceptors.request.use((config) => {
     let token: string | null = null;
 
     // Determine context based on current page path or request URL
+    const isTeacherRoute = window.location.pathname.startsWith('/teacher');
+    const isClassroomRoute = window.location.pathname.startsWith('/classroom');
     const isTeacherContext =
-        window.location.pathname.startsWith('/teacher') ||
-        Boolean(config.url && (config.url.includes('/teacher') || config.url.includes('/teachers')));
+        isTeacherRoute ||
+        (isClassroomRoute && Boolean(teacherAuth)) ||
+        Boolean(config.url && (config.url.includes('/teacher') || config.url.includes('/teachers') || config.url.includes('/feedback')));
 
     if (isTeacherContext) {
         // In teacher context, prioritize teacher token
@@ -65,10 +68,11 @@ apiClient.interceptors.response.use(
     (error) => {
         if (error.response?.status === 401) {
             const isTeacherRoute = window.location.pathname.startsWith('/teacher');
+            const isClassroomRoute = window.location.pathname.startsWith('/classroom');
             if (isTeacherRoute) {
                 localStorage.removeItem('teacher_auth');
                 window.location.href = '/teacher/login';
-            } else {
+            } else if (!isClassroomRoute) {
                 localStorage.removeItem('student_auth');
                 window.location.href = '/student/login';
             }

@@ -100,5 +100,6 @@
   "lesson.cleanPrompt": "This will permanently delete {count} lesson(s) — {cancelled} cancelled and {completed} completed. This action cannot be undone. Continue?",
   "lesson.cleanSuccess": "{count} lesson(s) have been permanently removed.",
   "lesson.cleanError": "Failed to clean lessons. Please try again.",
-  "lesson.cleanNone": "There are no cancelled or completed lessons to clean."
+  "lesson.cleanNone": "There are no cancelled or completed lessons to clean.",
+  "classroom.enterButton": "Enter Classroom"
 }

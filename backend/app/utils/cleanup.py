@@ -89,6 +89,8 @@ def _stripe_session_is_paid(stripe_session_id: str) -> bool:
         stripe.api_key = os.getenv("STRIPE_SECRET_KEY", "")
 
         session = stripe.checkout.Session.retrieve(stripe_session_id)
+        if hasattr(session, "to_dict"):
+            session = session.to_dict()
         return session.get("payment_status") == "paid"
 
     except Exception:

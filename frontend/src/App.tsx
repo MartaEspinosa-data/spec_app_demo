@@ -6,6 +6,7 @@ import ProfilePage from './pages/ProfilePage';
 import BookingPage from './pages/BookingPage';
 import DashboardPage from './pages/DashboardPage';
 import TeacherDashboard from './pages/TeacherDashboard';
+import ClassroomPage from './pages/ClassroomPage';
 import TeacherLogin from './pages/TeacherLogin';
 import StudentLogin from './pages/StudentLogin';
 import { PaymentSuccess, PaymentCancelled } from './pages/PaymentStatus';
@@ -31,6 +32,7 @@ function App() {
               <Route path="/book/:id" element={<BookingPage />} />
               <Route path="/booking/:id" element={<BookingPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/classroom/:id" element={<ClassroomPage />} />
               <Route path="/student/login" element={<StudentLogin />} />
               <Route path="/student/verify-email" element={<VerifyEmail />} />
               <Route path="/student/forgot-password" element={<ForgotPassword role="student" />} />

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Calendar, BookOpen, Clock, DollarSign, LogOut, Home, User, Play, Menu, X, XCircle, Trash2 } from 'lucide-react';
+import { Calendar, BookOpen, Clock, DollarSign, LogOut, Home, User, Menu, X, XCircle, Trash2, Video } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { useToast } from '../components/Toast';
 import LanguageSelector from '../components/LanguageSelector';
@@ -290,15 +290,15 @@ const DashboardPage = () => {
                                                     Cancel closed ({'<'} 24h)
                                                 </span>
                                             )}
-                                            <a
-                                                href={lesson.meeting_link || 'https://meet.google.com/pyv-dxwi-mxc'}
+                                            <Link
+                                                to={`/classroom/${lesson.id}`}
                                                 target="_blank" 
                                                 rel="noopener noreferrer"
-                                                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-green-600 text-white font-bold rounded-xl hover:bg-green-700 transition shadow-lg hover:shadow-green-500/30 flex items-center gap-2 text-xs sm:text-sm"
+                                                className="px-4 sm:px-6 py-2 sm:py-2.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-emerald-500/25 transition-all flex items-center gap-2 text-xs sm:text-sm shadow-md hover:scale-[1.02] active:scale-[0.98]"
                                             >
-                                                <Play size={14} />
-                                                Join Lesson
-                                            </a>
+                                                <Video size={16} />
+                                                {t('classroom.enterButton')}
+                                            </Link>
                                         </div>
                                     )}
 
