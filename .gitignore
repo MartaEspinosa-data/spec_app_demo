@@ -19,6 +19,7 @@ venv/
 # Secrets & credentials
 *coolify-setup*
 *-handoff*
+coolify.json
 
 # Universal
 .DS_Store
