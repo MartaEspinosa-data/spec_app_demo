@@ -15,7 +15,6 @@ import {
     PanelRightClose,
     PanelRightOpen,
     AlertCircle,
-    Server,
     Wifi,
     ScreenShare
 } from 'lucide-react';
