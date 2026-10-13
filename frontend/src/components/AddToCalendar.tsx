@@ -8,6 +8,8 @@ interface AddToCalendarProps {
     description: string;
     location: string;
     className?: string;
+    label?: string;
+    children?: React.ReactNode;
 }
 
 export const AddToCalendar: React.FC<AddToCalendarProps> = ({
@@ -16,7 +18,9 @@ export const AddToCalendar: React.FC<AddToCalendarProps> = ({
     durationMinutes,
     description,
     location,
-    className
+    className,
+    label,
+    children
 }) => {
     const generateGoogleUrl = () => {
         const start = new Date(startTime);
@@ -42,8 +46,14 @@ export const AddToCalendar: React.FC<AddToCalendarProps> = ({
             rel="noopener noreferrer"
             className={className || "flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-sm font-bold text-gray-700 hover:bg-gray-50 transition-all shadow-sm"}
         >
-            <Calendar size={16} className="text-indigo-600" />
-            Add to Google Calendar
+            {children ? (
+                children
+            ) : (
+                <>
+                    <Calendar size={16} className="text-indigo-600 shrink-0" />
+                    <span>{label || 'Add to Google Calendar'}</span>
+                </>
+            )}
         </a>
     );
 };
