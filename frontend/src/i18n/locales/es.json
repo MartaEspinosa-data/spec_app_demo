@@ -100,5 +100,6 @@
     "lesson.cleanPrompt": "Esto eliminará permanentemente {count} clase(s) — {cancelled} canceladas y {completed} completadas. Esta acción no se puede deshacer. ¿Continuar?",
     "lesson.cleanSuccess": "{count} clase(s) han sido eliminadas permanentemente.",
     "lesson.cleanError": "No se pudieron limpiar las clases. Por favor, inténtalo de nuevo.",
-    "lesson.cleanNone": "No hay clases canceladas ni completadas para limpiar."
+    "lesson.cleanNone": "No hay clases canceladas ni completadas para limpiar.",
+    "classroom.enterButton": "Entrar al Aula"
   }

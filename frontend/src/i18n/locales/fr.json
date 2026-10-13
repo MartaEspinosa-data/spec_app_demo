@@ -101,5 +101,6 @@
   "lesson.cancelling": "Annulation...",
   "lesson.cancelButton": "Annuler le Cours",
   "lesson.cancelSuccess": "Cours annulé avec succès. Le créneau est maintenant disponible.",
-  "lesson.cancelError": "Impossible d'annuler le cours. Il reste peut-être moins de 24h avant le début."
+  "lesson.cancelError": "Impossible d'annuler le cours. Il reste peut-être moins de 24h avant le début.",
+  "classroom.enterButton": "Entrer en classe"
 }

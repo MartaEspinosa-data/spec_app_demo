@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useLocation, useSearchParams, Link } from 'react-router-dom';
-import { Calendar, LogOut, Home, BookOpen, User, Clock, DollarSign, Menu, X, Trash2, Check, AlertCircle } from 'lucide-react';
+import { Calendar, LogOut, Home, BookOpen, User, Clock, DollarSign, Menu, X, Trash2, Check, AlertCircle, Video } from 'lucide-react';
 import LanguageSelector from '../components/LanguageSelector';
 import { useToast } from '../components/Toast';
 import { TeacherAvailabilityGrid } from '../components/calendar/TeacherAvailabilityGrid';
@@ -17,6 +17,7 @@ interface LessonInfo {
     duration: number;
     price: number;
     status: string;
+    meeting_link?: string;
     payment_method?: string;
     feedback_vocabulary?: string;
     feedback_errors?: string;
@@ -449,11 +450,21 @@ const TeacherDashboard = () => {
                         ) : (
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between mb-6">
-                                    <div className="flex items-center gap-4">
+                                    <div className="flex items-center gap-3 flex-wrap">
                                         <p className="text-xs sm:text-sm font-bold text-gray-400 uppercase tracking-wider">
                                             {lessons.length} lesson{lessons.length !== 1 ? 's' : ''} total
                                             {pendingLessons.length > 0 && ` (${pendingLessons.length} pendientes)`}
                                         </p>
+                                        <Link
+                                            to="/classroom/demo"
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-wider transition-all"
+                                            title="Open demo virtual classroom in a new tab"
+                                        >
+                                            <Video size={13} />
+                                            <span>Test Classroom (Demo)</span>
+                                        </Link>
                                         <button
                                             onClick={handleClearAll}
                                             className="flex items-center gap-1.5 px-3 py-1.5 bg-red-50 text-red-500 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-red-100 hover:text-red-600 transition-all"
@@ -479,10 +490,10 @@ const TeacherDashboard = () => {
                                                 <div className="mb-4 px-3 py-2 bg-amber-100/80 rounded-xl border border-amber-200 flex flex-wrap items-center justify-between gap-2">
                                                     <span className="flex items-center gap-2 text-xs font-black text-amber-900 uppercase tracking-wider">
                                                         <span className="inline-block w-2.5 h-2.5 rounded-full bg-amber-500 animate-ping" />
-                                                        ⚠️ Nueva Reserva Pendiente de Aceptación
+                                                        ⚠️ New Booking Awaiting Acceptance
                                                     </span>
                                                     <span className="text-[11px] font-bold text-amber-800">
-                                                        {lesson.payment_method === 'stripe' ? '💳 Pago con Stripe' : '💵 Pago Manual'}
+                                                        {lesson.payment_method === 'stripe' ? '💳 Stripe Payment' : '💵 Manual Payment'}
                                                     </span>
                                                 </div>
                                             )}
@@ -505,6 +516,18 @@ const TeacherDashboard = () => {
                                                         location="https://meet.google.com/pyv-dxwi-mxc"
                                                         className="flex items-center gap-1 sm:gap-2 px-2 sm:px-3 py-1.5 bg-gray-50 text-gray-500 rounded-lg text-[10px] sm:text-xs font-black uppercase tracking-widest hover:bg-indigo-50 hover:text-indigo-600 transition-all"
                                                     />
+                                                    {lesson.status !== 'cancelled' && (
+                                                        <Link
+                                                            to={`/classroom/${lesson.id}`}
+                                                            target="_blank"
+                                                            rel="noopener noreferrer"
+                                                            className="flex items-center gap-2 px-3.5 sm:px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white rounded-xl text-xs sm:text-sm font-black uppercase tracking-wider shadow-sm hover:shadow-emerald-600/30 transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                                            title="Enter virtual classroom with video call and board"
+                                                        >
+                                                            <Video size={16} className="shrink-0" />
+                                                            <span>Enter Classroom</span>
+                                                        </Link>
+                                                    )}
                                                     {isPending ? (
                                                         <div className="flex items-center gap-2">
                                                             <button

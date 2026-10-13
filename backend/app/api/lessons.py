@@ -163,6 +163,7 @@ def get_teacher_lessons(teacher_id: str, user: Dict[str, Any] = Depends(require_
             "duration": l.duration,
             "price": l.price,
             "status": l.status,
+            "meeting_link": l.meeting_link or "https://meet.google.com/pyv-dxwi-mxc",
             "payment_method": l.payment_method or "manual",
             "stripe_payment_link_url": l.stripe_payment_link_url or "",
             "stripe_session_id": l.stripe_session_id or "",
@@ -172,6 +173,54 @@ def get_teacher_lessons(teacher_id: str, user: Dict[str, Any] = Depends(require_
             "student_payment_account": l.student_payment_account or "",
         })
     return {"lessons": result}
+
+
+LIVEKIT_API_KEY = os.getenv("LIVEKIT_API_KEY", "devkey")
+LIVEKIT_API_SECRET = os.getenv("LIVEKIT_API_SECRET", "secret")
+LIVEKIT_URL = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
+
+
+@router.get("/{lesson_id}/livekit-token")
+def get_livekit_token(
+    lesson_id: str,
+    user_name: Optional[str] = None,
+    identity: Optional[str] = None,
+    db: Session = Depends(database.get_db)
+):
+    """
+    Generate a LiveKit JWT access token for the classroom session.
+    """
+    from livekit import api
+    import uuid
+
+    room_name = f"marta_lesson_{lesson_id}"
+    participant_identity = identity or f"user_{uuid.uuid4().hex[:8]}"
+    participant_name = user_name or "Participante"
+
+    grant = api.VideoGrants(
+        room_join=True,
+        room=room_name,
+        can_publish=True,
+        can_subscribe=True,
+        can_publish_data=True,
+    )
+    token = (
+        api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
+        .with_identity(participant_identity)
+        .with_name(participant_name)
+        .with_grants(grant)
+        .with_ttl(timedelta(hours=4))
+        .to_jwt()
+    )
+
+    return {
+        "token": token,
+        "server_url": LIVEKIT_URL,
+        "room_name": room_name,
+        "participant_name": participant_name,
+        "participant_identity": participant_identity,
+    }
+
 
 @router.post("/", response_model=dict)
 def create_lesson(lesson: schemas.LessonCreate, db: Session = Depends(database.get_db)):
@@ -871,3 +920,33 @@ def update_lesson_feedback(
             )
 
     return db_lesson
+
+
+# NOTE: Keep this catch-all route LAST so it doesn't shadow static GET routes like /price.
+@router.get("/{lesson_id}")
+def get_lesson(lesson_id: str, db: Session = Depends(database.get_db)):
+    """Fetch lesson details for classroom view."""
+    lesson = db.query(models.Lesson).options(
+        joinedload(models.Lesson.student),
+        joinedload(models.Lesson.teacher),
+    ).filter(models.Lesson.id == lesson_id).first()
+    if not lesson:
+        raise HTTPException(status_code=404, detail="Lesson not found")
+
+    return {
+        "id": lesson.id,
+        "teacher_id": lesson.teacher_id,
+        "teacher_name": lesson.teacher.name if lesson.teacher else "Marta",
+        "student_id": lesson.student_id,
+        "student_name": lesson.student.name if lesson.student else "Student",
+        "student_email": lesson.student.email if lesson.student else "",
+        "lesson_type": lesson.lesson_type,
+        "start_time": (lesson.start_time.isoformat() + "Z") if lesson.start_time else None,
+        "duration": lesson.duration,
+        "price": lesson.price,
+        "status": lesson.status,
+        "meeting_link": lesson.meeting_link or "https://meet.google.com/pyv-dxwi-mxc",
+        "feedback_vocabulary": lesson.feedback_vocabulary or "",
+        "feedback_errors": lesson.feedback_errors or "",
+        "feedback_materials": lesson.feedback_materials or "",
+    }

@@ -264,8 +264,30 @@ def send_teacher_notification(
 send_teacher_pending_lesson_email = send_teacher_notification
 
 
-def send_lesson_reminder(email: str, name: str, lesson_time: str, minutes_left: int, meeting_link: str = GOOGLE_MEET_LINK, teacher_name: str = "Marta"):
-    """Send a reminder email before the lesson starts."""
+def send_lesson_reminder(
+    email: str,
+    name: str,
+    lesson_time: str,
+    minutes_left: int,
+    meeting_link: Optional[str] = None,
+    teacher_name: str = "Marta",
+    lesson_id: Optional[str] = None,
+    classroom_url: Optional[str] = None,
+):
+    """Send a reminder email before the lesson starts with a link to join the classroom on our platform."""
+    load_dotenv()
+    frontend_url = os.getenv("FRONTEND_URL", "https://martaspanishteacher.com").rstrip("/")
+
+    # Resolve platform classroom URL instead of Google Meet
+    join_url = classroom_url
+    if not join_url:
+        if lesson_id:
+            join_url = f"{frontend_url}/classroom/{lesson_id}"
+        elif meeting_link and "meet.google.com" not in meeting_link:
+            join_url = meeting_link
+        else:
+            join_url = f"{frontend_url}/dashboard"
+
     if minutes_left == 60:
         reminder_text = f"En una hora comienza tu clase con {teacher_name}"
         subtitle_text = f"⏰ {reminder_text}"
@@ -279,31 +301,50 @@ def send_lesson_reminder(email: str, name: str, lesson_time: str, minutes_left: 
     subject = f"⏰ Lesson Reminder: Your Spanish class starts in {minutes_left} minutes!"
     
     html_body = f"""
-    <div style="font-family: 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #fffcf8; border-radius: 24px; overflow: hidden; border: 1px solid #ffedd5;">
-        <div style="background: #ea580c; padding: 40px 32px; text-align: center;">
-            <h1 style="color: white; font-size: 28px; margin: 0;">¡Tu clase empieza pronto! 🇪🇸</h1>
-            <p style="color: rgba(255,255,255,0.9); font-size: 16px; margin-top: 8px;">{subtitle_text}</p>
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #fed7aa; box-shadow: 0 4px 20px rgba(0,0,0,0.05);">
+        <!-- Header Banner with solid vibrant warm background for full Outlook/Gmail support -->
+        <div style="background-color: #ea580c; background: #ea580c; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 28px; font-weight: 800; margin: 0; line-height: 1.3;">¡Tu clase empieza pronto! 🇪🇸</h1>
+            <p style="color: #ffedd5 !important; font-size: 16px; margin: 8px 0 0 0; font-weight: 600;">{subtitle_text}</p>
         </div>
         
-        <div style="padding: 32px;">
-            <p style="font-size: 18px; color: #1f2937;">Hola <strong>{name}</strong>,</p>
-            <p style="font-size: 16px; color: #4b5563; line-height: 1.6;">
-                {reminder_text}. Get your materials ready and join the classroom!
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{name}</strong>,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
+                {reminder_text}. Prepárate y accede directamente a nuestra aula virtual para comenzar la clase.
             </p>
+
+            <div style="background-color: #fff7ed; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #ffedd5;">
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 8px 0; color: #9a3412; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">HORA / TIME</td>
+                        <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right;">{lesson_time}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #9a3412; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #fed7aa;">COMIENZA EN / STARTS IN</td>
+                        <td style="padding: 8px 0; color: #ea580c; font-size: 15px; font-weight: 800; text-align: right; border-top: 1px solid #fed7aa;">{minutes_left} minutes</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 8px 0; color: #9a3412; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #fed7aa;">PLATAFORMA / PLATFORM</td>
+                        <td style="padding: 8px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #fed7aa;">Aula Virtual Profe Marta 💻</td>
+                    </tr>
+                </table>
+            </div>
             
-            <div style="text-align: center; margin: 40px 0;">
-                <a href="{meeting_link}"
-                   style="display: inline-block; background: #ea580c; color: white; padding: 18px 48px;
-                           border-radius: 12px; text-decoration: none; font-size: 20px; font-weight: bold;
-                           box-shadow: 0 4px 14px rgba(234,88,12,0.4);">
-                    🚀 Join the Classroom
+            <div style="text-align: center; margin: 32px 0 20px 0;">
+                <a href="{join_url}"
+                   style="display: inline-block; background-color: #ea580c; background: #ea580c; color: #ffffff !important; padding: 18px 44px;
+                           border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: 800;
+                           box-shadow: 0 4px 14px rgba(234,88,12,0.35);">
+                    🚀 Entrar al Aula Virtual / Join Classroom
                 </a>
-                <p style="color: #9ca3af; font-size: 13px; margin-top: 12px;">
-                    Link: <a href="{meeting_link}" style="color: #ea580c;">{meeting_link}</a>
+                <p style="color: #6b7280; font-size: 13px; margin: 14px 0 0 0;">
+                    Enlace directo al aula: <br/>
+                    <a href="{join_url}" style="color: #ea580c; font-weight: 600; text-decoration: underline; word-break: break-all;">{join_url}</a>
                 </p>
             </div>
             
-            <p style="font-size: 14px; color: #9ca3af; text-align: center; border-top: 1px solid #ffedd5; padding-top: 24px;">
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 ¡Nos vemos en clase! — {teacher_name} ❤️
             </p>
         </div>
@@ -358,9 +399,20 @@ def send_teacher_acceptance_email(teacher_email: str, teacher_name: str, student
     return _send_email(teacher_email, subject, html_body)
 
 
-def send_student_acceptance_email(student_email: str, student_name: str, lesson_date: str, duration: int, lesson_type: str):
+def send_student_acceptance_email(
+    student_email: str,
+    student_name: str,
+    lesson_date: str,
+    duration: int,
+    lesson_type: str,
+    lesson_id: Optional[str] = None,
+    classroom_url: Optional[str] = None,
+):
     """Notification sent to the student when the teacher accepts their lesson."""
     subject = f"🎉 Your Spanish Lesson is Confirmed!"
+    load_dotenv()
+    frontend_url = os.getenv("FRONTEND_URL", "https://martaspanishteacher.com").rstrip("/")
+    join_url = classroom_url or (f"{frontend_url}/classroom/{lesson_id}" if lesson_id else f"{frontend_url}/dashboard")
 
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
@@ -394,14 +446,14 @@ def send_student_acceptance_email(student_email: str, student_name: str, lesson_
             </div>
 
             <div style="text-align: center; margin: 32px 0 20px 0;">
-                <a href="{GOOGLE_MEET_LINK}"
+                <a href="{join_url}"
                    style="display: inline-block; background-color: #059669; background: #059669; color: #ffffff !important; padding: 16px 36px;
                           border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
                           box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
-                    📹 Join Google Meet Lesson
+                    🚀 Enter Virtual Classroom
                 </a>
                 <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
-                    Meeting link: <a href="{GOOGLE_MEET_LINK}" style="color: #059669; font-weight: 600; text-decoration: underline;">{GOOGLE_MEET_LINK}</a>
+                    Classroom link: <a href="{join_url}" style="color: #059669; font-weight: 600; text-decoration: underline;">{join_url}</a>
                 </p>
             </div>
 
