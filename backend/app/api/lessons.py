@@ -190,8 +190,18 @@ def get_livekit_token(
     """
     Generate a LiveKit JWT access token for the classroom session.
     """
-    from livekit import api
+    try:
+        from livekit import api
+    except ImportError:
+        raise HTTPException(
+            status_code=500,
+            detail="LiveKit SDK is not installed. Please run: pip install livekit-api",
+        )
     import uuid
+
+    api_key = os.getenv("LIVEKIT_API_KEY", "devkey")
+    api_secret = os.getenv("LIVEKIT_API_SECRET", "secret")
+    server_url = os.getenv("LIVEKIT_URL", "ws://localhost:7880")
 
     room_name = f"marta_lesson_{lesson_id}"
     participant_identity = identity or f"user_{uuid.uuid4().hex[:8]}"
@@ -205,7 +215,7 @@ def get_livekit_token(
         can_publish_data=True,
     )
     token = (
-        api.AccessToken(LIVEKIT_API_KEY, LIVEKIT_API_SECRET)
+        api.AccessToken(api_key, api_secret)
         .with_identity(participant_identity)
         .with_name(participant_name)
         .with_grants(grant)
@@ -215,7 +225,7 @@ def get_livekit_token(
 
     return {
         "token": token,
-        "server_url": LIVEKIT_URL,
+        "server_url": server_url,
         "room_name": room_name,
         "participant_name": participant_name,
         "participant_identity": participant_identity,
@@ -560,6 +570,8 @@ def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
 
     try:
         session = stripe.checkout.Session.retrieve(session_id)
+        if hasattr(session, "to_dict"):
+            session = session.to_dict()
     except stripe.StripeError as e:
         raise HTTPException(status_code=400, detail=f"Invalid or expired session: {str(e)}")
 
@@ -694,6 +706,8 @@ def _find_paid_session_for_lesson(lesson: models.Lesson) -> Optional[str]:
     if lesson.stripe_session_id:
         try:
             s = stripe.checkout.Session.retrieve(lesson.stripe_session_id)
+            if hasattr(s, "to_dict"):
+                s = s.to_dict()
             if s.get("payment_status") == "paid":
                 return s.get("id")
         except stripe.StripeError as e:
@@ -702,13 +716,14 @@ def _find_paid_session_for_lesson(lesson: models.Lesson) -> Optional[str]:
     # 2. Payment Link flow: search recent sessions by client_reference_id
     try:
         for s in stripe.checkout.Session.list(limit=100).auto_paging_iter():
-            if s.get("client_reference_id") == lesson.id and s.get("payment_status") == "paid":
-                return s.get("id")
+            s_dict = s.to_dict() if hasattr(s, "to_dict") else s
+            if s_dict.get("client_reference_id") == lesson.id and s_dict.get("payment_status") == "paid":
+                return s_dict.get("id")
             # Sessions are returned newest first; stop once older than the lesson booking
             created_at = getattr(lesson, "created_at", None)
-            if created_at and s.get("created"):
+            if created_at and s_dict.get("created"):
                 lesson_ts = (created_at if created_at.tzinfo else created_at.replace(tzinfo=timezone.utc)).timestamp()
-                if s["created"] < lesson_ts - 3600:
+                if s_dict["created"] < lesson_ts - 3600:
                     break
     except stripe.StripeError as e:
         print(f"[PAYMENT-NOTIFY] Could not list sessions: {e}")
@@ -740,6 +755,8 @@ def payment_notify(body: PaymentNotifyRequest, db: Session = Depends(database.ge
     if body.session_id:
         try:
             session = stripe.checkout.Session.retrieve(body.session_id)
+            if hasattr(session, "to_dict"):
+                session = session.to_dict()
         except stripe.StripeError as e:
             raise HTTPException(status_code=400, detail=f"Invalid or expired session: {str(e)}")
         if session.get("payment_status") != "paid":

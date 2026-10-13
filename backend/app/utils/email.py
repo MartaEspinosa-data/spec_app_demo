@@ -1,4 +1,10 @@
+import os
+from pathlib import Path
 from dotenv import load_dotenv
+
+_backend_env = Path(__file__).resolve().parent.parent.parent / ".env"
+if _backend_env.is_file():
+    load_dotenv(_backend_env)
 load_dotenv()
 
 import smtplib
@@ -10,9 +16,15 @@ from typing import Optional
 GOOGLE_MEET_LINK = "https://meet.google.com/pyv-dxwi-mxc"
 
 
+def _reload_env():
+    if _backend_env.is_file():
+        load_dotenv(_backend_env)
+    load_dotenv()
+
+
 def get_teacher_email() -> str:
     """Return the recipient email address for teacher notifications."""
-    load_dotenv()
+    _reload_env()
     return (
         os.getenv("TEACHER_NOTIFICATION_EMAIL")
         or os.getenv("TEACHER_EMAIL")
@@ -22,7 +34,7 @@ def get_teacher_email() -> str:
 
 def _send_email(to_email: str, subject: str, html_body: str) -> bool:
     """Internal helper to send an email via SMTP. Falls back to console logging in demo mode."""
-    load_dotenv()
+    _reload_env()
     smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
     smtp_port = int(os.getenv("SMTP_PORT", "587"))
     smtp_user = os.getenv("SMTP_USER", "")

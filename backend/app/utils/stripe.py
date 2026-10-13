@@ -186,6 +186,8 @@ def update_session_metadata(session_id: str, metadata_updates: dict) -> bool:
     try:
         stripe.api_key = _get_secret_key()
         session = stripe.checkout.Session.retrieve(session_id)
+        if hasattr(session, "to_dict"):
+            session = session.to_dict()
         existing_metadata = session.get("metadata", {}) or {}
         merged = {**existing_metadata, **metadata_updates}
         stripe.checkout.Session.modify(session_id, metadata=merged)
@@ -244,6 +246,8 @@ def refund_checkout_session(session_id: str) -> bool:
 
         # Retrieve the Checkout Session to get the payment_intent
         session = stripe.checkout.Session.retrieve(session_id)
+        if hasattr(session, "to_dict"):
+            session = session.to_dict()
         payment_intent_id = session.get("payment_intent")
 
         if not payment_intent_id:
