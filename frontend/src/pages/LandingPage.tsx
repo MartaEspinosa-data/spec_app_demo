@@ -181,7 +181,7 @@ const LandingPage = () => {
                             </Link>
                         ) : (
                             <Link to="/student/login" className="px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 text-sm">
-                                Student Login
+                                {t('nav.studentLogin') || 'Student Login'}
                             </Link>
                         )}
                         <Link to={`/book/${TEACHER_ID}`} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-500/30 text-sm">
@@ -211,7 +211,7 @@ const LandingPage = () => {
                             </Link>
                         ) : (
                             <Link to="/student/login" onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition text-center">
-                                Student Login
+                                {t('nav.studentLogin') || 'Student Login'}
                             </Link>
                         )}
                         <Link to={`/book/${TEACHER_ID}`} onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition text-center">

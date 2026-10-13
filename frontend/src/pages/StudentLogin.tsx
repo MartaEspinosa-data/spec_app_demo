@@ -3,10 +3,13 @@ import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
 import { API_URL } from '../config';
 import { useToast } from '../components/Toast';
+import { useLanguage } from '../i18n';
+import LanguageSelector from '../components/LanguageSelector';
 import { GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from 'jwt-decode';
 
 const StudentLogin = () => {
+    const { t } = useLanguage();
     const navigate = useNavigate();
     const { addToast } = useToast();
     const [isRegister, setIsRegister] = useState(false);
@@ -132,14 +135,15 @@ const StudentLogin = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-purple-50 flex items-center justify-center p-4 sm:p-6">
             <div className="w-full max-w-md">
-                <div className="mb-4 sm:mb-6">
+                <div className="mb-4 sm:mb-6 flex items-center justify-between">
                     <Link
                         to="/"
                         className="inline-flex items-center gap-2 text-sm font-bold text-gray-500 hover:text-indigo-600 transition group"
                     >
                         <ArrowLeft size={16} className="group-hover:-translate-x-1 transition-transform" />
-                        <span>Back to main page</span>
+                        <span>{t('auth.backHome') || 'Back to main page'}</span>
                     </Link>
+                    <LanguageSelector />
                 </div>
 
                 <div className="text-center mb-6 sm:mb-10">
@@ -151,14 +155,14 @@ const StudentLogin = () => {
                         />
                     </Link>
                     <h1 className="text-2xl sm:text-3xl font-black text-gray-900 mt-4 sm:mt-6 mb-2">
-                        {registeredEmail ? 'Check Your Email' : isRegister ? 'Create Account' : 'Student Login'}
+                        {registeredEmail ? (t('auth.checkEmail') || 'Check Your Email') : isRegister ? (t('auth.createAccount') || 'Create Account') : (t('auth.studentLogin') || 'Student Login')}
                     </h1>
                     <p className="text-gray-500 font-medium text-sm sm:text-base">
                         {registeredEmail
-                            ? 'Verify that your account exists to finish setup'
+                            ? (t('auth.verifySubtitle') || 'Verify that your account exists to finish setup')
                             : isRegister
-                                ? 'Sign up to book and track your lessons'
-                                : 'Access your booked lessons'}
+                                ? (t('auth.registerSubtitle') || 'Sign up to book and track your lessons')
+                                : (t('auth.loginSubtitle') || 'Access your booked lessons')}
                     </p>
                 </div>
 
@@ -170,13 +174,13 @@ const StudentLogin = () => {
                             </div>
 
                             <div className="space-y-2">
-                                <h3 className="text-xl font-black text-gray-900">Verification Link Sent</h3>
+                                <h3 className="text-xl font-black text-gray-900">{t('auth.verifyLinkSent') || 'Verification Link Sent'}</h3>
                                 <p className="text-sm text-gray-600 leading-relaxed">
-                                    We've sent a verification link to{' '}
+                                    {(t('auth.verifyLinkDesc') || "We've sent a verification link to")}{' '}
                                     <strong className="text-gray-900 font-bold">{registeredEmail}</strong>.
                                 </p>
                                 <p className="text-xs text-gray-400">
-                                    Please check your inbox (and spam folder) and click the link to verify your account.
+                                    {t('auth.verifyInboxCheck') || 'Please check your inbox (and spam folder) and click the link to verify your account.'}
                                 </p>
                             </div>
 
@@ -187,7 +191,7 @@ const StudentLogin = () => {
                                     className="w-full py-3.5 bg-gray-100 text-gray-700 hover:bg-gray-200 rounded-2xl font-bold text-sm transition flex items-center justify-center gap-2 disabled:opacity-50"
                                 >
                                     {resending ? <RefreshCw size={16} className="animate-spin" /> : <RefreshCw size={16} />}
-                                    {resending ? 'Sending...' : 'Resend Verification Email'}
+                                    {resending ? (t('auth.resending') || 'Sending...') : (t('auth.resendVerification') || 'Resend Verification Email')}
                                 </button>
 
                                 <button
@@ -198,7 +202,7 @@ const StudentLogin = () => {
                                     }}
                                     className="w-full py-3.5 bg-indigo-600 text-white hover:bg-indigo-700 rounded-2xl font-bold text-sm shadow-lg hover:shadow-indigo-500/30 transition"
                                 >
-                                    Back to Sign In
+                                    {t('auth.backToSignIn') || 'Back to Sign In'}
                                 </button>
 
                                 <div className="pt-2 border-t border-gray-100">
@@ -207,7 +211,7 @@ const StudentLogin = () => {
                                         className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-gray-400 hover:text-indigo-600 transition group"
                                     >
                                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                                        <span>Back to main page</span>
+                                        <span>{t('auth.backHome') || 'Back to main page'}</span>
                                     </Link>
                                 </div>
                             </div>
@@ -224,7 +228,7 @@ const StudentLogin = () => {
                                             disabled={resending}
                                             className="text-xs font-black uppercase tracking-wider text-indigo-600 hover:text-indigo-800 underline inline-flex items-center gap-1 mt-1"
                                         >
-                                            {resending ? 'Sending...' : 'Click here to resend verification link'}
+                                            {resending ? (t('auth.resending') || 'Sending...') : (t('auth.resendVerification') || 'Click here to resend verification link')}
                                         </button>
                                     )}
                                 </div>
@@ -233,13 +237,13 @@ const StudentLogin = () => {
                             <form onSubmit={handleSubmit} className="space-y-5">
                                 {isRegister && (
                                     <div className="space-y-2">
-                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Full Name</label>
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('auth.fullName') || 'Full Name'}</label>
                                         <div className="relative">
                                             <User size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                             <input
                                                 required
                                                 type="text"
-                                                placeholder="Your name"
+                                                placeholder={t('auth.namePlaceholder') || 'Your name'}
                                                 value={form.name}
                                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
                                                 className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
@@ -249,13 +253,13 @@ const StudentLogin = () => {
                                 )}
 
                                 <div className="space-y-2">
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Email</label>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('auth.email') || 'Email'}</label>
                                     <div className="relative">
                                         <Mail size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input
                                             required
                                             type="email"
-                                            placeholder="you@email.com"
+                                            placeholder={t('auth.emailPlaceholder') || 'you@email.com'}
                                             value={form.email}
                                             onChange={(e) => setForm({ ...form, email: e.target.value })}
                                             className="w-full pl-12 pr-4 py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700"
@@ -264,7 +268,7 @@ const StudentLogin = () => {
                                 </div>
 
                                 <div className="space-y-2">
-                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">Password</label>
+                                    <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('auth.password') || 'Password'}</label>
                                     <div className="relative">
                                         <Lock size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" />
                                         <input
@@ -283,9 +287,9 @@ const StudentLogin = () => {
                                     disabled={loading}
                                     className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-black text-lg shadow-xl hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-0.5 transition-all active:scale-95 disabled:opacity-50 flex items-center justify-center gap-3"
                                 >
-                                    {loading ? 'Loading...' : (
+                                    {loading ? (t('auth.loading') || 'Loading...') : (
                                         <>
-                                            {isRegister ? 'Create Account' : 'Sign In'}
+                                            {isRegister ? (t('auth.createAccount') || 'Create Account') : (t('auth.signIn') || 'Sign In')}
                                             <ArrowRight size={20} />
                                         </>
                                     )}
@@ -297,7 +301,7 @@ const StudentLogin = () => {
                                     <div className="w-full border-t border-gray-100"></div>
                                 </div>
                                 <div className="relative flex justify-center text-xs uppercase font-black tracking-widest">
-                                    <span className="bg-white px-4 text-gray-400">or continue with</span>
+                                    <span className="bg-white px-4 text-gray-400">{t('auth.orContinueWith') || 'or continue with'}</span>
                                 </div>
                             </div>
 
@@ -318,7 +322,7 @@ const StudentLogin = () => {
                                     onClick={() => { setIsRegister(!isRegister); setError(''); setIsUnverified(false); }}
                                     className="text-sm font-bold text-indigo-600 hover:text-indigo-700 transition"
                                 >
-                                    {isRegister ? 'Already have an account? Sign in' : "Don't have an account? Sign up"}
+                                    {isRegister ? (t('auth.haveAccount') || 'Already have an account? Sign in') : (t('auth.noAccount') || "Don't have an account? Sign up")}
                                 </button>
                                 {!isRegister && (
                                     <div>
@@ -326,7 +330,7 @@ const StudentLogin = () => {
                                             to="/student/forgot-password"
                                             className="text-sm font-bold text-gray-400 hover:text-indigo-600 transition"
                                         >
-                                            Forgot your password?
+                                            {t('auth.forgotPassword') || 'Forgot your password?'}
                                         </Link>
                                     </div>
                                 )}
@@ -336,7 +340,7 @@ const StudentLogin = () => {
                                         className="inline-flex items-center justify-center gap-1.5 text-xs font-bold text-gray-400 hover:text-indigo-600 transition group"
                                     >
                                         <ArrowLeft size={14} className="group-hover:-translate-x-1 transition-transform" />
-                                        <span>Back to main page</span>
+                                        <span>{t('auth.backHome') || 'Back to main page'}</span>
                                     </Link>
                                 </div>
                             </div>

@@ -323,7 +323,7 @@ const DashboardPage = () => {
             {/* Bottom Controls */}
             <div className="pt-6 border-t border-gray-100 flex flex-col gap-4">
                 <div className="flex items-center justify-between px-1">
-                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Idioma</span>
+                    <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{t('dashboard.language') || 'Language'}</span>
                     <LanguageSelector />
                 </div>
                 <button 
@@ -615,7 +615,7 @@ const DashboardPage = () => {
                 {loading ? (
                     <div className="bg-white rounded-3xl border border-gray-150 p-16 text-center shadow-xs">
                         <div className="w-10 h-10 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-                        <p className="text-gray-500 font-bold text-sm">Cargando tus clases...</p>
+                        <p className="text-gray-500 font-bold text-sm">{t('dashboard.loading') || 'Loading...'}</p>
                     </div>
                 ) : lessons.length === 0 ? (
                     <div className="bg-white rounded-3xl border border-gray-150 p-12 sm:p-20 text-center shadow-xs">
