@@ -682,10 +682,10 @@ export const ClassroomPage: React.FC = () => {
                     ) : (
                         <div className="flex-1 flex flex-col items-center justify-center bg-slate-950 p-6 text-center">
                             <div className="max-w-md bg-slate-900 border border-slate-800 rounded-3xl p-8 shadow-2xl text-center">
-                                <Server size={52} className="text-emerald-500 mx-auto mb-4" />
-                                <h3 className="text-2xl font-black text-white mb-2">LiveKit Classroom Ready</h3>
+                                <Video size={52} className="text-emerald-500 mx-auto mb-4" />
+                                <h3 className="text-2xl font-black text-white mb-2">Aula Virtual</h3>
                                 <p className="text-sm sm:text-base text-slate-300 mb-6 leading-relaxed">
-                                    The native LiveKit classroom is configured. Once you start your LiveKit Docker container on your server ({livekitServerUrl}), video and audio will connect automatically.
+                                    Conectando la videollamada interactiva. Si tarda en cargar o prefieres usar Google Meet, puedes entrar directamente pulsando el botón de abajo:
                                 </p>
                                 <a
                                     href={lesson.meeting_link || 'https://meet.google.com/pyv-dxwi-mxc'}
@@ -694,7 +694,7 @@ export const ClassroomPage: React.FC = () => {
                                     className="inline-flex items-center justify-center gap-2 px-6 py-3.5 bg-emerald-600 hover:bg-emerald-500 text-white font-black rounded-xl text-sm sm:text-base uppercase tracking-wider transition shadow-lg shadow-emerald-600/25"
                                 >
                                     <ExternalLink size={18} />
-                                    Open in Google Meet
+                                    Abrir en Google Meet
                                 </a>
                             </div>
                         </div>
