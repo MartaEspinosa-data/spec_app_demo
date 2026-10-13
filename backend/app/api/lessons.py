@@ -852,8 +852,7 @@ def update_lesson_feedback(
         student_name = student.name if student else "Student"
 
         if old_status == "pending" and new_status == "scheduled":
-            # Teacher manually accepted a non-stripe/manual lesson
-            # (Payment-backed lessons skip this path entirely; the webhook auto-schedules them)
+            # Teacher accepted the lesson (either manual booking or Stripe-paid booking)
             if student_email:
                 send_student_acceptance_email(
                     student_email=student_email,
@@ -861,6 +860,7 @@ def update_lesson_feedback(
                     lesson_date=lesson_date_str,
                     duration=db_lesson.duration,
                     lesson_type=db_lesson.lesson_type,
+                    lesson_id=str(db_lesson.id),
                 )
             send_teacher_acceptance_email(
                 teacher_email=teacher_email,
@@ -868,6 +868,7 @@ def update_lesson_feedback(
                 student_name=student_name,
                 lesson_date=lesson_date_str,
                 lesson_type=db_lesson.lesson_type,
+                lesson_id=str(db_lesson.id),
             )
 
         elif old_status == "pending" and new_status == "cancelled":

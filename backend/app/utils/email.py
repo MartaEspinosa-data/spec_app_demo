@@ -358,9 +358,20 @@ def send_lesson_reminder(
 # Teacher Acceptance / Rejection Notification Emails
 # ---------------------------------------------------------------------------
 
-def send_teacher_acceptance_email(teacher_email: str, teacher_name: str, student_name: str, lesson_date: str, lesson_type: str):
+def send_teacher_acceptance_email(
+    teacher_email: str,
+    teacher_name: str,
+    student_name: str,
+    lesson_date: str,
+    lesson_type: str,
+    lesson_id: Optional[str] = None,
+    classroom_url: Optional[str] = None,
+):
     """Confirmation sent to the teacher after they accept a pending lesson."""
     subject = f"✅ Lesson Accepted: {student_name} on {lesson_date}"
+    load_dotenv()
+    frontend_url = os.getenv("FRONTEND_URL", "https://martaspanishteacher.com").rstrip("/")
+    join_url = classroom_url or (f"{frontend_url}/classroom/{lesson_id}" if lesson_id else f"{frontend_url}/teacher/dashboard")
 
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
@@ -371,7 +382,7 @@ def send_teacher_acceptance_email(teacher_email: str, teacher_name: str, student
         <div style="padding: 32px 28px; background-color: #ffffff;">
             <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{teacher_name}</strong>,</p>
             <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
-                You have accepted the lesson with <strong>{student_name}</strong>. The student has been notified.
+                You have accepted the lesson with <strong>{student_name}</strong>. The student has received their confirmation email with the link to our video classroom platform.
             </p>
             <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
                 <table style="width: 100%; border-collapse: collapse;">
@@ -387,8 +398,25 @@ def send_teacher_acceptance_email(teacher_email: str, teacher_name: str, student
                         <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
                         <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
                     </tr>
+                    <tr>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">PLATFORM</td>
+                        <td style="padding: 10px 0; color: #059669; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">Aula Virtual Profe Marta 💻</td>
+                    </tr>
                 </table>
             </div>
+
+            <div style="text-align: center; margin: 30px 0 20px 0;">
+                <a href="{join_url}"
+                   style="display: inline-block; background-color: #059669; background: #059669; color: #ffffff !important; padding: 16px 36px;
+                          border-radius: 12px; text-decoration: none; font-size: 16px; font-weight: 800;
+                          box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
+                    🚀 Entrar al Aula Virtual / Enter Classroom
+                </a>
+                <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
+                    Enlace al aula: <a href="{join_url}" style="color: #059669; font-weight: 600; text-decoration: underline; word-break: break-all;">{join_url}</a>
+                </p>
+            </div>
+
             <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
                 ¡Nos vemos en clase! — Profe Marta ❤️
             </p>
@@ -409,7 +437,7 @@ def send_student_acceptance_email(
     classroom_url: Optional[str] = None,
 ):
     """Notification sent to the student when the teacher accepts their lesson."""
-    subject = f"🎉 Your Spanish Lesson is Confirmed!"
+    subject = f"🎉 ¡Tu clase de español ha sido confirmada! / Your Spanish Lesson is Confirmed!"
     load_dotenv()
     frontend_url = os.getenv("FRONTEND_URL", "https://martaspanishteacher.com").rstrip("/")
     join_url = classroom_url or (f"{frontend_url}/classroom/{lesson_id}" if lesson_id else f"{frontend_url}/dashboard")
@@ -419,41 +447,67 @@ def send_student_acceptance_email(
         <!-- Header Banner with dark solid background for full Outlook/Hotmail support -->
         <div style="background-color: #065f46; background: #065f46; padding: 36px 24px; text-align: center;">
             <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">✅ ¡Clase Aceptada! 🇪🇸</h1>
-            <p style="color: #d1fae5 !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Your teacher has confirmed your Spanish lesson</p>
+            <p style="color: #d1fae5 !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">Profe Marta has confirmed your Spanish lesson</p>
         </div>
         
         <div style="padding: 32px 28px; background-color: #ffffff;">
             <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">Hola <strong>{student_name}</strong>,</p>
             <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
-                Profe Marta has accepted your lesson. Here are your lesson details:
+                ¡Buenas noticias! Profe Marta ha aceptado tu clase. Ya está todo preparado para nuestra sesión.
+                <br/>
+                <span style="color: #6b7280; font-size: 14px;">(Great news! Profe Marta has accepted your lesson. Everything is ready for your session.)</span>
             </p>
             
             <div style="background-color: #f9fafb; border-radius: 12px; padding: 20px 24px; margin: 24px 0; border: 1px solid #e5e7eb;">
                 <table style="width: 100%; border-collapse: collapse;">
                     <tr>
-                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">DATE &amp; TIME</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px;">FECHA Y HORA / DATE &amp; TIME</td>
                         <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right;">{lesson_date}</td>
                     </tr>
                     <tr>
-                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">DURATION</td>
-                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{duration} minutes</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">DURACIÓN / DURATION</td>
+                        <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{duration} minutos</td>
                     </tr>
                     <tr>
-                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TYPE</td>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">TIPO DE CLASE / TYPE</td>
                         <td style="padding: 10px 0; color: #111827; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">{lesson_type}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 10px 0; color: #4b5563; font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid #f3f4f6;">PLATAFORMA / PLATFORM</td>
+                        <td style="padding: 10px 0; color: #059669; font-size: 15px; font-weight: 700; text-align: right; border-top: 1px solid #f3f4f6;">Aula Virtual Profe Marta 💻</td>
                     </tr>
                 </table>
             </div>
 
+            <!-- Video Platform Callout Box -->
+            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 20px 22px; margin: 24px 0;">
+                <p style="margin: 0 0 8px 0; font-size: 15px; font-weight: 800; color: #065f46;">
+                    💻 Aula Virtual con Videollamada / Video Platform
+                </p>
+                <p style="margin: 0; color: #047857; font-size: 14px; line-height: 1.6;">
+                    Tu clase se realizará directamente en nuestra <strong>propia plataforma de video interactiva</strong> con videollamada y pizarra en tiempo real. A la hora acordada, solo tienes que hacer clic en el enlace para unirte:
+                </p>
+                <p style="margin: 8px 0 0 0; color: #065f46; font-size: 13px; line-height: 1.5; font-style: italic;">
+                    (Your class will take place on our integrated video platform. No extra software or installation needed — simply click the button below to join!)
+                </p>
+            </div>
+
             <div style="text-align: center; margin: 32px 0 20px 0;">
                 <a href="{join_url}"
-                   style="display: inline-block; background-color: #059669; background: #059669; color: #ffffff !important; padding: 16px 36px;
-                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;
-                          box-shadow: 0 4px 12px rgba(5,150,105,0.3);">
-                    🚀 Enter Virtual Classroom
+                   style="display: inline-block; background-color: #059669; background: #059669; color: #ffffff !important; padding: 18px 40px;
+                          border-radius: 12px; text-decoration: none; font-size: 18px; font-weight: 800;
+                          box-shadow: 0 4px 14px rgba(5,150,105,0.35);">
+                    🚀 Entrar al Aula Virtual / Join Video Classroom
                 </a>
-                <p style="color: #6b7280; font-size: 13px; margin: 12px 0 0 0;">
-                    Classroom link: <a href="{join_url}" style="color: #059669; font-weight: 600; text-decoration: underline;">{join_url}</a>
+                <p style="color: #6b7280; font-size: 13px; margin: 14px 0 0 0;">
+                    Enlace directo al aula / Direct classroom link: <br/>
+                    <a href="{join_url}" style="color: #059669; font-weight: 600; text-decoration: underline; word-break: break-all;">{join_url}</a>
+                </p>
+            </div>
+
+            <div style="background-color: #f9fafb; border-radius: 10px; padding: 14px 18px; margin: 20px 0; border: 1px dashed #d1d5db;">
+                <p style="margin: 0; color: #4b5563; font-size: 13px; line-height: 1.5;">
+                    💡 <strong>Consejo / Tip:</strong> Para una mejor experiencia, permite el acceso a tu cámara y micrófono en el navegador cuando entres al aula virtual.
                 </p>
             </div>
 
