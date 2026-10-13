@@ -6,7 +6,6 @@ import { teacherService } from '../services/teacherService';
 import type { Teacher } from '../services/teacherService';
 import { useToast } from '../components/Toast';
 import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
-import { DurationSelector } from '../components/calendar/DurationSelector';
 import { ChevronLeft, Info } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import LanguageSelector from '../components/LanguageSelector';
@@ -151,17 +150,15 @@ const BookingPage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-start">
                     {/* Left: Custom Calendar */}
                     <div className="lg:col-span-8">
-                        <DurationSelector
-                            selected={selectedDuration}
-                            onChange={(mins) => {
-                                setSelectedDuration(mins);
-                                setSelectedSlot(null);
-                            }}
-                        />
                         <StudentBookingCalendar
                             teacherId={teacher.id}
                             onSlotSelect={setSelectedSlot}
+                            selectedSlot={selectedSlot}
                             durationMinutes={selectedDuration}
+                            onDurationChange={(mins) => {
+                                setSelectedDuration(mins);
+                                setSelectedSlot(null);
+                            }}
                         />
                     </div>
 

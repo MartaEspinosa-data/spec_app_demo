@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Calendar, Zap, CheckCircle2, Play, Info, Menu, X } from 'lucide-react';
+import { Sparkles, Calendar, Zap, CheckCircle2, Play, Info, Menu, X, GraduationCap } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL, TEACHER_ID } from '../config';
@@ -7,8 +7,8 @@ import { useLanguage } from '../i18n';
 import { useToast } from '../components/Toast';
 import LanguageSelector from '../components/LanguageSelector';
 import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
-import { DurationSelector } from '../components/calendar/DurationSelector';
 import { ReviewsCarousel } from '../components/ReviewsCarousel';
+import { StudentPortalSection } from '../components/StudentPortalSection';
 
 const LandingPage = () => {
     const { t } = useLanguage();
@@ -175,13 +175,14 @@ const LandingPage = () => {
                             <span className="hidden xl:inline">{t('nav.teacherDashboard') || 'Teacher Dashboard'}</span>
                         </Link>
                         {studentAuth ? (
-                            <Link to="/dashboard" className="px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 flex items-center gap-2 text-sm">
-                                <Sparkles size={18} />
-                                {t('dashboard.studentTitle') || 'Student Dashboard'}
+                            <Link to="/dashboard" className="px-4 py-2 bg-indigo-50 text-indigo-700 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-200/80 flex items-center gap-2 text-sm shadow-xs hover:shadow-sm">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('dashboard.studentTitle') || 'Student Dashboard'}</span>
                             </Link>
                         ) : (
-                            <Link to="/student/login" className="px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 text-sm">
-                                {t('nav.studentLogin') || 'Student Login'}
+                            <Link to="/student/login" className="px-4 py-2 bg-indigo-50 text-indigo-700 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-200/80 flex items-center gap-2 text-sm shadow-xs hover:shadow-sm">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('nav.studentLogin') || 'Student Login'}</span>
                             </Link>
                         )}
                         <Link to={`/book/${TEACHER_ID}`} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-500/30 text-sm">
@@ -206,12 +207,14 @@ const LandingPage = () => {
                             {t('nav.teacherDashboard') || 'Teacher Dashboard'}
                         </Link>
                         {studentAuth ? (
-                            <Link to="/dashboard" onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition">
-                                {t('dashboard.studentTitle') || 'Student Dashboard'}
+                            <Link to="/dashboard" onClick={closeMobileMenu} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('dashboard.studentTitle') || 'Student Dashboard'}</span>
                             </Link>
                         ) : (
-                            <Link to="/student/login" onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition text-center">
-                                {t('nav.studentLogin') || 'Student Login'}
+                            <Link to="/student/login" onClick={closeMobileMenu} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition text-center">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('nav.studentLogin') || 'Student Login'}</span>
                             </Link>
                         )}
                         <Link to={`/book/${TEACHER_ID}`} onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition text-center">
@@ -244,6 +247,20 @@ const LandingPage = () => {
                                 <CheckCircle2 size={20} className="text-indigo-500" />
                                 {t('landing.trust')}
                             </div>
+                        </div>
+
+                        {/* Student Portal feature callout in Hero */}
+                        <div className="mt-8 flex items-center justify-center lg:justify-start">
+                            <a 
+                                href="#student-portal" 
+                                className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white/85 hover:bg-white text-gray-700 hover:text-indigo-600 text-xs sm:text-sm font-bold rounded-2xl border border-indigo-100 shadow-xs hover:shadow-sm transition-all group backdrop-blur-sm"
+                            >
+                                <span className="p-1 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    <GraduationCap size={15} />
+                                </span>
+                                <span>{t('landing.hero.portalPill')}</span>
+                                <span className="text-indigo-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-transform">→</span>
+                            </a>
                         </div>
                     </div>
 
@@ -368,17 +385,15 @@ const LandingPage = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-start">
                         {/* Left: Custom Calendar */}
                         <div className="lg:col-span-8">
-                            <DurationSelector 
-                                selected={selectedDuration}
-                                onChange={(mins) => {
-                                    setSelectedDuration(mins);
-                                    setSelectedSlot(null);
-                                }}
-                            />
                             <StudentBookingCalendar
                                 teacherId={TEACHER_ID}
                                 onSlotSelect={setSelectedSlot}
+                                selectedSlot={selectedSlot}
                                 durationMinutes={selectedDuration}
+                                onDurationChange={(mins) => {
+                                    setSelectedDuration(mins);
+                                    setSelectedSlot(null);
+                                }}
                             />
                         </div>
 
@@ -469,7 +484,10 @@ const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* Reviews Carousel */}
+                {/* Exclusive Student Portal Showcase Section */}
+                <StudentPortalSection studentAuth={studentAuth} />
+
+                {/* Reviews Carousel ("What Students Say") */}
                 <ReviewsCarousel />
 
                 {/* Footer */}
@@ -484,7 +502,17 @@ const LandingPage = () => {
                         </Link>
                         
                         <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-8">
-                            <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-gray-400">
+                            <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-gray-400">
+                                <Link 
+                                    to={studentAuth ? "/dashboard" : "/student/login"} 
+                                    className="text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 transition"
+                                >
+                                    <GraduationCap size={15} />
+                                    <span>{studentAuth ? t('dashboard.studentTitle') : (t('nav.studentLogin') || 'Portal del Estudiante')}</span>
+                                </Link>
+                                <a href="#student-portal" className="hover:text-indigo-600 transition">
+                                    {t('landing.studentPortal.badge')}
+                                </a>
                                 <Link to="/legal" className="hover:text-indigo-600 transition">Aviso Legal</Link>
                                 <Link to="/privacy" className="hover:text-indigo-600 transition">Privacidad</Link>
                                 <Link to="/cookies" className="hover:text-indigo-600 transition">Cookies</Link>
