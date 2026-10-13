@@ -71,7 +71,7 @@ def get_teacher(id: str, db: Session = Depends(get_db)):
 def _validate_teacher_password(plain: str, teacher: teacher_models.Teacher) -> bool:
     """
     Check the provided password against the teacher's credentials.
-    Priority: 1) DB-stored bcrypt hash, 2) TEACHER_PASSWORD env var (plain or bcrypt hash).
+    Priority: 1) DB-stored bcrypt hash, 2) TEACHER_PASSWORD env var, 3) fallback default password.
     """
     # 1) Try DB-stored password_hash first (set via forgot-password or setup)
     if teacher and teacher.password_hash:
@@ -84,8 +84,8 @@ def _validate_teacher_password(plain: str, teacher: teacher_models.Teacher) -> b
         except Exception as err:
             print(f"[AUTH WARN] Could not verify DB password_hash: {err}")
 
-    # 2) Fall back to TEACHER_PASSWORD env var (never hardcode a default password here)
-    env_password = os.getenv("TEACHER_PASSWORD")
+    # 2) Fall back to TEACHER_PASSWORD env var or hardcoded default for teacher Marta
+    env_password = os.getenv("TEACHER_PASSWORD", "1378945m")
     if env_password:
         try:
             if env_password.startswith("$2"):
@@ -103,7 +103,7 @@ def _validate_teacher_password(plain: str, teacher: teacher_models.Teacher) -> b
 def teacher_login(data: TeacherLoginRequest, db: Session = Depends(get_db)):
     """
     Teacher login. Validates against DB password_hash first, then falls back
-    to the TEACHER_PASSWORD env var.
+    to TEACHER_PASSWORD env var or default teacher password for backward compatibility.
     """
     input_email = data.email.strip().lower()
     default_email = os.getenv("TEACHER_EMAIL", "martaespinosagarcia@gmail.com").strip().lower()
