@@ -410,6 +410,10 @@ def reschedule_lesson(lesson_id: str, new_start_time: str, user: Dict[str, Any] 
     utc_new_time = new_time.astimezone(timezone.utc) if new_time.tzinfo else new_time.replace(tzinfo=timezone.utc)
     
     lesson.start_time = utc_new_time  # store as timezone-aware UTC
+    lesson.reminder_60m_sent = 0
+    lesson.reminder_30m_sent = 0
+    lesson.teacher_reminder_60m_sent = 0
+    lesson.teacher_reminder_30m_sent = 0
     db.commit()
     db.refresh(lesson)
     

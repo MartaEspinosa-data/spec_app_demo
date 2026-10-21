@@ -35,6 +35,24 @@ async def lifespan(app: FastAPI):
     except Exception:
         pass
 
+    try:
+        from sqlalchemy import text
+        from app.database.database import engine
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE lessons ADD COLUMN teacher_reminder_60m_sent INTEGER DEFAULT 0"))
+            conn.commit()
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        from app.database.database import engine
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE lessons ADD COLUMN teacher_reminder_30m_sent INTEGER DEFAULT 0"))
+            conn.commit()
+    except Exception:
+        pass
+
     scheduler.add_job(check_reminders, 'interval', minutes=5)
     scheduler.add_job(expire_pending_lessons, 'interval', minutes=5)
     scheduler.start()

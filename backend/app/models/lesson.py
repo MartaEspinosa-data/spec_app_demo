@@ -38,6 +38,8 @@ class Lesson(Base):
     # Notifications tracking
     reminder_60m_sent = Column(Integer, default=0) # Using 0/1 for SQLite simplicity
     reminder_30m_sent = Column(Integer, default=0)
+    teacher_reminder_60m_sent = Column(Integer, default=0)
+    teacher_reminder_30m_sent = Column(Integer, default=0)
     payment_email_sent = Column(Integer, default=0)
     
     student = relationship("Student")
