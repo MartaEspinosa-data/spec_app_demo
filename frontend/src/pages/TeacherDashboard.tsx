@@ -19,6 +19,7 @@ interface LessonInfo {
     status: string;
     meeting_link?: string;
     payment_method?: string;
+    package_id?: string | null;
     feedback_vocabulary?: string;
     feedback_errors?: string;
     feedback_materials?: string;
@@ -503,7 +504,14 @@ const TeacherDashboard = () => {
                                                         <User size={20} />
                                                     </div>
                                                     <div className="min-w-0">
-                                                        <h3 className="font-black text-gray-900 text-base sm:text-lg truncate">{lesson.student_name}</h3>
+                                                        <div className="flex items-center gap-2">
+                                                            <h3 className="font-black text-gray-900 text-base sm:text-lg truncate">{lesson.student_name}</h3>
+                                                            {lesson.package_id && (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
+                                                                    🎟️ Bono 5 Clases
+                                                                </span>
+                                                            )}
+                                                        </div>
                                                         <p className="text-gray-400 text-xs sm:text-sm font-medium truncate">{lesson.student_email}</p>
                                                     </div>
                                                 </div>

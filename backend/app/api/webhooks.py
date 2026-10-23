@@ -54,7 +54,10 @@ async def stripe_webhook(request: Request, db: Session = Depends(database.get_db
 
     # ── Handle completed checkout ──────────────────────────────────────────
     if event_type == "checkout.session.completed":
-        _handle_lesson_checkout_completed(db, session_obj, metadata)
+        if payment_type == "package":
+            _handle_package_checkout_completed(db, session_obj, metadata)
+        else:
+            _handle_lesson_checkout_completed(db, session_obj, metadata)
 
     # ── Handle expired / abandoned checkout ────────────────────────────────
     elif event_type == "checkout.session.expired":
@@ -64,6 +67,48 @@ async def stripe_webhook(request: Request, db: Session = Depends(database.get_db
         print(f"[STRIPE WEBHOOK] Unhandled event type: {event_type}")
 
     return {"status": "ok"}
+
+
+def _handle_package_checkout_completed(db: Session, session_obj: dict, metadata: dict):
+    from app.models.lesson_package import LessonPackage
+    from app.utils.email import send_package_confirmation_email, send_teacher_package_notification
+
+    stripe_session_id = session_obj.get("id")
+    package_id = metadata.get("package_id") if metadata else None
+
+    pkg = None
+    if package_id:
+        pkg = db.query(LessonPackage).filter(LessonPackage.id == package_id).first()
+    if not pkg and stripe_session_id:
+        pkg = db.query(LessonPackage).filter(LessonPackage.stripe_session_id == stripe_session_id).first()
+
+    if not pkg:
+        print(f"[STRIPE WEBHOOK] Package not found for session {stripe_session_id}")
+        return
+
+    if pkg.status != "active":
+        pkg.status = "active"
+        pkg.stripe_session_id = stripe_session_id
+        db.commit()
+
+        student = db.query(student_models.Student).filter(student_models.Student.id == pkg.student_id).first()
+        if student:
+            send_package_confirmation_email(
+                student_email=student.email,
+                student_name=student.name,
+                lesson_type=pkg.lesson_type,
+                duration=pkg.duration,
+                total_price=pkg.total_price,
+                credits=pkg.total_credits,
+            )
+            send_teacher_package_notification(
+                student_name=student.name,
+                student_email=student.email,
+                lesson_type=pkg.lesson_type,
+                duration=pkg.duration,
+                total_price=pkg.total_price,
+            )
+        print(f"[STRIPE WEBHOOK] Package {pkg.id} activated successfully.")
 
 
 # ── Lesson-specific checkout handlers ───────────────────────────────────────

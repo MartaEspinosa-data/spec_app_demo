@@ -13,7 +13,7 @@ from collections import defaultdict
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
-from app.api import teachers, lessons, availability, students, webhooks
+from app.api import teachers, lessons, availability, students, webhooks, packages
 from apscheduler.schedulers.background import BackgroundScheduler
 from app.utils.reminders import check_reminders
 from app.utils.cleanup import expire_pending_lessons
@@ -26,6 +26,22 @@ scheduler = BackgroundScheduler()
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle for the FastAPI application."""
     # Startup
+    try:
+        from app.database.database import Base, engine
+        import app.models.lesson_package  # noqa: F401
+        Base.metadata.create_all(bind=engine)
+    except Exception:
+        pass
+
+    try:
+        from sqlalchemy import text
+        from app.database.database import engine
+        with engine.connect() as conn:
+            conn.execute(text("ALTER TABLE lessons ADD COLUMN package_id VARCHAR"))
+            conn.commit()
+    except Exception:
+        pass
+
     try:
         from sqlalchemy import text
         from app.database.database import engine
@@ -69,6 +85,7 @@ app.include_router(lessons.router)
 app.include_router(availability.router)
 app.include_router(students.router)
 app.include_router(webhooks.router)
+app.include_router(packages.router)
 
 # Configure CORS — allow FRONTEND_URL and additional origins from env
 _default_origins = [

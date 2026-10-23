@@ -160,11 +160,15 @@ export const PaymentSuccess = () => {
                     </div>
 
                     <h1 className="text-3xl sm:text-5xl font-black text-gray-900 mb-4 tracking-tight">
-                        {t('payment.success.title')}
+                        {searchParams.get('type') === 'package'
+                            ? (t('payment.package.title') || '¡Bono de 5 clases activado!')
+                            : t('payment.success.title')}
                     </h1>
 
                     <p className="text-base sm:text-lg text-gray-600 mb-8 max-w-lg mx-auto font-medium leading-relaxed">
-                        {t('payment.success.subtitle')}
+                        {searchParams.get('type') === 'package'
+                            ? (t('payment.package.subtitle') || 'Hemos añadido 5 créditos con un 3% de descuento a tu perfil. Ya puedes elegir las fechas y horarios de tus clases desde tu panel de alumno.')
+                            : t('payment.success.subtitle')}
                     </p>
 
                     {/* Next steps checklist */}
@@ -217,15 +221,24 @@ export const PaymentSuccess = () => {
                 </div>
             )}
 
-            {/* Navigation button: Volver a la página principal en color */}
-            <div className="w-full max-w-md flex justify-center">
+            {/* Navigation button */}
+            <div className="w-full max-w-md flex flex-col sm:flex-row items-center justify-center gap-3">
+                {searchParams.get('type') === 'package' ? (
+                    <Link 
+                        to="/dashboard" 
+                        className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-8 py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700 text-white text-base font-bold rounded-2xl shadow-xl shadow-amber-500/25 hover:-translate-y-0.5 transition-all active:scale-95"
+                    >
+                        <span>🎟️</span>
+                        {t('payment.package.goToDashboard') || 'Ir a mis Bonos de Clases'}
+                    </Link>
+                ) : null}
                 <Link 
                     to="/" 
                     id="payment-success-return-home"
                     onClick={handleReturnHome}
-                    className="w-full sm:w-auto inline-flex items-center justify-center gap-3 px-10 py-4.5 bg-indigo-600 hover:bg-indigo-700 text-white text-lg font-bold rounded-2xl shadow-xl shadow-indigo-600/30 hover:-translate-y-0.5 transition-all active:scale-95"
+                    className="w-full sm:w-auto inline-flex items-center justify-center gap-2.5 px-7 py-4 bg-indigo-600 hover:bg-indigo-700 text-white text-base font-bold rounded-2xl shadow-xl shadow-indigo-600/30 hover:-translate-y-0.5 transition-all active:scale-95"
                 >
-                    <Home size={22} />
+                    <Home size={20} />
                     {t('payment.success.home')}
                 </Link>
             </div>

@@ -19,7 +19,8 @@ import {
     CalendarPlus, 
     Sparkles, 
     Globe, 
-    ExternalLink
+    ExternalLink,
+    Gift
 } from 'lucide-react';
 import { useLanguage } from '../i18n';
 import { useToast } from '../components/Toast';
@@ -29,6 +30,19 @@ import { AddToCalendar } from '../components/AddToCalendar';
 import apiClient from '../services/apiClient';
 import { TEACHER_ID } from '../config';
 
+interface LessonPackage {
+    id: string;
+    student_id: string;
+    teacher_id: string;
+    lesson_type: string;
+    duration: number;
+    total_credits: number;
+    remaining_credits: number;
+    price_total: number;
+    status: string;
+    created_at: string;
+}
+
 interface LessonInfo {
     id: string;
     lesson_type: string;
@@ -37,6 +51,7 @@ interface LessonInfo {
     price: number;
     status: string;
     meeting_link: string | null;
+    package_id?: string | null;
     feedback_vocabulary?: string;
     feedback_errors?: string;
     feedback_materials?: string;
@@ -49,8 +64,12 @@ const DashboardPage = () => {
     const { addToast } = useToast();
     const navigate = useNavigate();
     const [lessons, setLessons] = useState<LessonInfo[]>([]);
+    const [packages, setPackages] = useState<LessonPackage[]>([]);
     const [loading, setLoading] = useState(true);
     const [reschedulingLesson, setReschedulingLesson] = useState<LessonInfo | null>(null);
+    const [bookingPackage, setBookingPackage] = useState<LessonPackage | null>(null);
+    const [packageBookingSlot, setPackageBookingSlot] = useState<string | null>(null);
+    const [bookingWithCreditLoading, setBookingWithCreditLoading] = useState(false);
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<TabType>('all');
 
@@ -62,7 +81,39 @@ const DashboardPage = () => {
             return;
         }
         fetchLessons();
+        fetchPackages();
     }, []);
+
+    const fetchPackages = async () => {
+        if (!studentAuth?.student_id) return;
+        try {
+            const res = await apiClient.get(`/packages/student/${studentAuth.student_id}`);
+            setPackages(res.data.packages || []);
+        } catch (err: any) {
+            console.warn('[Dashboard] Could not fetch packages:', err);
+        }
+    };
+
+    const handleBookPackageCredit = async () => {
+        if (!bookingPackage || !packageBookingSlot) {
+            addToast('error', t('dashboard.package.selectSlotPrompt') || 'Por favor, selecciona una fecha y hora en el calendario.');
+            return;
+        }
+        setBookingWithCreditLoading(true);
+        try {
+            await apiClient.post(`/packages/${bookingPackage.id}/book`, {
+                start_time: packageBookingSlot
+            });
+            addToast('success', t('dashboard.package.bookSuccess') || '¡Clase reservada con éxito usando 1 crédito de tu bono!');
+            setBookingPackage(null);
+            setPackageBookingSlot(null);
+            await Promise.all([fetchLessons(), fetchPackages()]);
+        } catch (err: any) {
+            addToast('error', err?.response?.data?.detail || 'Error al reservar con el crédito.');
+        } finally {
+            setBookingWithCreditLoading(false);
+        }
+    };
 
     const fetchLessons = async () => {
         try {
@@ -471,6 +522,119 @@ const DashboardPage = () => {
                     </div>
                 </div>
 
+                {/* Lesson Packages Section */}
+                {packages.length > 0 && (
+                    <div className="mb-8 bg-gradient-to-br from-amber-500/10 via-indigo-50/40 to-purple-50/20 rounded-3xl p-6 sm:p-7 border border-amber-200/80 shadow-xs">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/30">
+                                    <Gift size={22} />
+                                </div>
+                                <div>
+                                    <div className="flex items-center gap-2">
+                                        <h2 className="text-lg sm:text-xl font-black text-gray-900 tracking-tight">
+                                            {t('dashboard.packages.title') || 'Mis Bonos de Clases'}
+                                        </h2>
+                                        <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-200">
+                                            3% Dto.
+                                        </span>
+                                    </div>
+                                    <p className="text-xs sm:text-sm text-gray-500 font-medium mt-0.5">
+                                        {t('dashboard.packages.subtitle') || 'Usa tus créditos disponibles para programar tus clases cuando mejor te convenga.'}
+                                    </p>
+                                </div>
+                            </div>
+                            <Link
+                                to="/#book-a-lesson"
+                                className="self-start sm:self-auto inline-flex items-center gap-1.5 text-xs font-bold text-amber-900 hover:text-amber-950 bg-white hover:bg-amber-50/80 px-3.5 py-2 rounded-xl border border-amber-200/80 transition-all shadow-2xs"
+                            >
+                                <span>+ Comprar nuevo bono</span>
+                            </Link>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {packages.map((pkg) => {
+                                const isDepleted = pkg.remaining_credits <= 0;
+                                return (
+                                    <div 
+                                        key={pkg.id} 
+                                        className={`rounded-2xl p-5 border transition-all ${
+                                            isDepleted 
+                                                ? 'bg-white/60 border-gray-200 opacity-70' 
+                                                : 'bg-white border-amber-200 shadow-sm hover:shadow-md'
+                                        }`}
+                                    >
+                                        <div className="flex items-start justify-between gap-2 mb-3">
+                                            <div>
+                                                <span className="text-[11px] font-black uppercase tracking-wider text-amber-700 bg-amber-50 px-2.5 py-0.5 rounded-lg border border-amber-100">
+                                                    Bono 5 Clases
+                                                </span>
+                                                <h3 className="font-black text-base text-gray-900 mt-1.5">
+                                                    {pkg.lesson_type}
+                                                </h3>
+                                                <p className="text-xs text-gray-500 font-medium">
+                                                    {pkg.duration} minutos por clase
+                                                </p>
+                                            </div>
+                                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                                isDepleted 
+                                                    ? 'bg-gray-100 text-gray-600' 
+                                                    : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                            }`}>
+                                                {isDepleted ? 'Agotado' : 'Activo'}
+                                            </span>
+                                        </div>
+
+                                        {/* Credit progress pills */}
+                                        <div className="my-4 p-3 bg-gray-50/80 rounded-xl border border-gray-100">
+                                            <div className="flex items-center justify-between text-xs font-bold text-gray-700 mb-2">
+                                                <span>Créditos restantes</span>
+                                                <span className="text-sm font-black text-indigo-600">
+                                                    {pkg.remaining_credits} / {pkg.total_credits}
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5">
+                                                {Array.from({ length: pkg.total_credits }).map((_, idx) => {
+                                                    const isAvailable = idx < pkg.remaining_credits;
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            className={`h-2 flex-1 rounded-full transition-all ${
+                                                                isAvailable 
+                                                                    ? 'bg-gradient-to-r from-amber-400 to-amber-500 shadow-2xs' 
+                                                                    : 'bg-gray-200'
+                                                            }`}
+                                                            title={isAvailable ? 'Crédito disponible' : 'Crédito canjeado'}
+                                                        />
+                                                    );
+                                                })}
+                                            </div>
+                                        </div>
+
+                                        <button
+                                            onClick={() => {
+                                                setBookingPackage(pkg);
+                                                setPackageBookingSlot(null);
+                                            }}
+                                            disabled={isDepleted}
+                                            className={`w-full py-2.5 px-4 rounded-xl text-xs font-bold flex items-center justify-center gap-2 transition-all ${
+                                                isDepleted
+                                                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                                                    : 'bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white shadow-md shadow-indigo-600/20 active:scale-98 cursor-pointer'
+                                            }`}
+                                        >
+                                            <CalendarPlus size={15} />
+                                            <span>
+                                                {isDepleted ? 'Bono agotado' : 'Reservar con 1 crédito'}
+                                            </span>
+                                        </button>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                )}
+
                 {/* Hero Spotlight: Next Upcoming Lesson */}
                 {nextLesson && (
                     <div className="mb-8 relative overflow-hidden bg-gradient-to-br from-[#1e293b] via-[#1e1b4b] to-[#0f172a] rounded-3xl p-6 sm:p-8 text-white shadow-xl shadow-indigo-950/10 border border-slate-700/50">
@@ -689,6 +853,11 @@ const DashboardPage = () => {
                                                         <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`} />
                                                         {badge.label}
                                                     </span>
+                                                    {lesson.package_id && (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-black bg-amber-50 text-amber-800 border border-amber-200">
+                                                            🎟️ {t('dashboard.package.badge') || 'Bono 5 Clases'}
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500 font-medium">
@@ -869,6 +1038,80 @@ const DashboardPage = () => {
                                         }
                                     }}
                                 />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Booking with Package Credit Modal */}
+                {bookingPackage && (
+                    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 sm:p-6 animate-in fade-in duration-200">
+                        <div className="bg-white rounded-3xl w-full max-w-2xl overflow-hidden shadow-2xl animate-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col border border-gray-100">
+                            <div className="p-6 bg-gradient-to-r from-amber-500 to-indigo-600 text-white flex items-center justify-between shrink-0">
+                                <div className="space-y-1">
+                                    <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/20 text-xs font-bold">
+                                        <Gift size={12} />
+                                        <span>{t('dashboard.package.modalBadge') || 'Bono de 5 Clases'}</span>
+                                    </div>
+                                    <h2 className="text-xl sm:text-2xl font-black text-white">
+                                        {bookingPackage.lesson_type}
+                                    </h2>
+                                    <p className="text-xs text-amber-100 font-medium">
+                                        {bookingPackage.duration} min · {bookingPackage.remaining_credits} créditos disponibles
+                                    </p>
+                                </div>
+                                <button 
+                                    onClick={() => {
+                                        setBookingPackage(null);
+                                        setPackageBookingSlot(null);
+                                    }}
+                                    className="p-2 hover:bg-white/10 rounded-full transition text-white/80 hover:text-white shrink-0 cursor-pointer"
+                                    aria-label="Cerrar"
+                                >
+                                    <X size={22} />
+                                </button>
+                            </div>
+                            
+                            <div className="p-6 overflow-y-auto space-y-4">
+                                <div className="bg-amber-50/70 border border-amber-200 rounded-2xl p-4 text-xs sm:text-sm text-amber-900 font-medium">
+                                    💡 Selecciona la fecha y hora para tu clase. Al confirmar, se consumirá 1 crédito de tu bono automáticamente.
+                                </div>
+
+                                <StudentBookingCalendar
+                                    teacherId={bookingPackage.teacher_id || TEACHER_ID}
+                                    durationMinutes={bookingPackage.duration}
+                                    selectedSlot={packageBookingSlot}
+                                    onSlotSelect={(slot) => setPackageBookingSlot(slot)}
+                                />
+                            </div>
+
+                            <div className="p-4 sm:p-5 bg-gray-50 border-t border-gray-100 flex items-center justify-end gap-3 shrink-0">
+                                <button
+                                    onClick={() => {
+                                        setBookingPackage(null);
+                                        setPackageBookingSlot(null);
+                                    }}
+                                    className="px-4 py-2.5 rounded-xl text-xs font-bold text-gray-600 hover:bg-gray-200 transition cursor-pointer"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleBookPackageCredit}
+                                    disabled={!packageBookingSlot || bookingWithCreditLoading}
+                                    className="px-6 py-2.5 rounded-xl text-xs sm:text-sm font-bold bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white shadow-md shadow-indigo-600/25 transition-all flex items-center gap-2 cursor-pointer"
+                                >
+                                    {bookingWithCreditLoading ? (
+                                        <>
+                                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                                            <span>Reservando...</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <CheckCircle2 size={16} />
+                                            <span>Confirmar Reserva con Crédito</span>
+                                        </>
+                                    )}
+                                </button>
                             </div>
                         </div>
                     </div>

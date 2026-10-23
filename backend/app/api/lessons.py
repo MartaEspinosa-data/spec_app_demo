@@ -171,6 +171,7 @@ def get_teacher_lessons(teacher_id: str, user: Dict[str, Any] = Depends(require_
             "feedback_errors": l.feedback_errors,
             "feedback_materials": l.feedback_materials,
             "student_payment_account": l.student_payment_account or "",
+            "package_id": l.package_id,
         })
     return {"lessons": result}
 
@@ -463,6 +464,10 @@ def cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require_student
     db.commit()
     db.refresh(lesson)
 
+    if lesson.package_id:
+        from app.services.packages import restore_package_credit
+        restore_package_credit(db, lesson.package_id)
+
     return {
         "status": "success",
         "message": "Lesson cancelled. The time slot is now available for other students.",
@@ -475,6 +480,7 @@ def teacher_cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require
     """Teacher cancels (rejects) a lesson — any status except completed.
 
     If the lesson was paid via Stripe, a full refund is issued automatically.
+    If it was booked via package credit, 1 credit is returned to the package.
     The student is notified by email. No 24h restriction applies; the teacher
     can cancel at any time.
     """
@@ -487,9 +493,13 @@ def teacher_cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require
 
     old_status = lesson.status
 
-    # ── Issue Stripe refund if the lesson was paid ──────────────────────────
+    # ── Issue Stripe refund if the lesson was paid (and not a package credit) ───
     refund_status: Optional[str] = None
-    if lesson.stripe_session_id and lesson.payment_method == "stripe":
+    if lesson.package_id:
+        from app.services.packages import restore_package_credit
+        restore_package_credit(db, lesson.package_id)
+        refund_status = "credit_returned"
+    elif lesson.stripe_session_id and lesson.payment_method == "stripe":
         from app.utils.stripe import refund_checkout_session
         refunded = refund_checkout_session(lesson.stripe_session_id)
         refund_status = "refunded" if refunded else "refund_failed"
@@ -520,6 +530,7 @@ def teacher_cancel_lesson(lesson_id: str, user: Dict[str, Any] = Depends(require
             lesson_date=lesson_date_str,
             lesson_type=lesson.lesson_type,
             price=lesson.price,
+            credit_returned=bool(lesson.package_id),
         )
 
     # Teacher notification
@@ -588,6 +599,48 @@ def verify_payment(session_id: str, db: Session = Depends(database.get_db)):
             "status": "pending",
             "message": "Payment has not been completed yet.",
             "payment_status": payment_status,
+        }
+
+    # ── Package payment ──────────────────────────────────────────────
+    if payment_type == "package":
+        package_id = metadata.get("package_id")
+        from app.models.lesson_package import LessonPackage
+        from app.utils.email import send_package_confirmation_email, send_teacher_package_notification
+        pkg = db.query(LessonPackage).filter(LessonPackage.stripe_session_id == session_id).first()
+        if not pkg and package_id:
+            pkg = db.query(LessonPackage).filter(LessonPackage.id == package_id).first()
+        if pkg:
+            if pkg.status != "active":
+                pkg.status = "active"
+                pkg.stripe_session_id = session_id
+                db.commit()
+                student = db.query(student_models.Student).filter(student_models.Student.id == pkg.student_id).first()
+                if student:
+                    send_package_confirmation_email(
+                        student_email=student.email,
+                        student_name=student.name,
+                        lesson_type=pkg.lesson_type,
+                        duration=pkg.duration,
+                        total_price=pkg.total_price,
+                        credits=pkg.total_credits,
+                    )
+                    send_teacher_package_notification(
+                        student_name=student.name,
+                        student_email=student.email,
+                        lesson_type=pkg.lesson_type,
+                        duration=pkg.duration,
+                        total_price=pkg.total_price,
+                    )
+            return {
+                "status": "confirmed",
+                "payment_type": "package",
+                "message": "Package payment verified.",
+                "package_id": pkg.id,
+            }
+        return {
+            "status": "confirmed",
+            "payment_type": "package",
+            "message": "Package payment processed.",
         }
 
     # ── Lesson payment ───────────────────────────────────────────────

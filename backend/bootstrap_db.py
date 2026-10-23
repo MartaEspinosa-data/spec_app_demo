@@ -24,6 +24,7 @@ from app.models.teacher import Teacher
 from app.models.student import Student  # noqa: F401  (register model)
 from app.models.lesson import Lesson  # noqa: F401  (register model)
 from app.models.availability import TeacherAvailability  # noqa: F401  (register model)
+from app.models.lesson_package import LessonPackage  # noqa: F401  (register model)
 
 TEACHER_ID = os.getenv("TEACHER_ID", "dc92ef71-d458-4e75-92d9-69b64fc1c964")
 TEACHER_EMAIL = os.getenv("TEACHER_EMAIL", "martaespinosagarcia@gmail.com")

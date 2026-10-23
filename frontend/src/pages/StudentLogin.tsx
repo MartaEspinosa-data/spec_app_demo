@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate, Link, useSearchParams } from 'react-router-dom';
 import { Mail, Lock, User, ArrowRight, ArrowLeft, RefreshCw } from 'lucide-react';
 import { API_URL } from '../config';
 import { useToast } from '../components/Toast';
@@ -11,11 +11,14 @@ import { jwtDecode } from 'jwt-decode';
 const StudentLogin = () => {
     const { t } = useLanguage();
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const { addToast } = useToast();
     const [isRegister, setIsRegister] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const [form, setForm] = useState({ name: '', email: '', password: '' });
+
+    const redirectTarget = searchParams.get('redirect') || '/dashboard';
 
     // Email verification state
     const [registeredEmail, setRegisteredEmail] = useState('');
@@ -64,7 +67,7 @@ const StudentLogin = () => {
             // Normal login succeeded
             localStorage.setItem('student_auth', JSON.stringify(data));
             addToast('success', 'Welcome back!');
-            navigate('/dashboard');
+            navigate(redirectTarget);
         } catch (err: any) {
             const msg = err.message || 'Connection error. Please try again.';
             setError(msg);
@@ -123,7 +126,7 @@ const StudentLogin = () => {
             // Store full response including access_token for JWT auth
             localStorage.setItem('student_auth', JSON.stringify(data));
             addToast('success', 'Welcome! You are now signed in.');
-            navigate('/dashboard');
+            navigate(redirectTarget);
         } catch (err: any) {
             const msg = err.message || 'Connection error. Please try again.';
             setError(msg);

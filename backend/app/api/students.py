@@ -369,6 +369,8 @@ def get_student_lessons(
             "feedback_vocabulary": l.feedback_vocabulary,
             "feedback_errors": l.feedback_errors,
             "feedback_materials": l.feedback_materials,
+            "payment_method": l.payment_method,
+            "package_id": l.package_id,
         })
     return {"lessons": result}
 

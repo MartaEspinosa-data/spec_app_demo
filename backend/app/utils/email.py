@@ -635,9 +635,21 @@ def send_student_acceptance_email(
     return _send_email(student_email, subject, html_body)
 
 
-def send_student_rejection_email(student_email: str, student_name: str, lesson_date: str, lesson_type: str, price: float):
-    """Notification sent to the student when the teacher rejects their lesson. Includes refund info."""
+def send_student_rejection_email(student_email: str, student_name: str, lesson_date: str, lesson_type: str, price: float, credit_returned: bool = False):
+    """Notification sent to the student when the teacher rejects their lesson. Includes refund or credit return info."""
     subject = f"❌ Your Spanish Lesson Request was Declined"
+
+    refund_box = f"""
+            <div style="background-color: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 12px; padding: 18px; margin: 24px 0; text-align: center;">
+                <p style="font-size: 15px; color: #065f46; font-weight: 700; margin: 0;">🎟️ Se ha devuelto 1 crédito a tu paquete de clases.</p>
+                <p style="font-size: 13px; color: #047857; margin: 6px 0 0 0;">Puedes usar tu crédito para reservar cualquier otro horario desde tu portal.</p>
+            </div>
+    """ if credit_returned else f"""
+            <div style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 18px; margin: 24px 0; text-align: center;">
+                <p style="font-size: 15px; color: #92400e; font-weight: 700; margin: 0;">💸 A full refund of <strong>${price:.2f}</strong> is being processed.</p>
+                <p style="font-size: 13px; color: #a16207; margin: 6px 0 0 0;">Please allow 5–10 business days for the credit to appear on your statement.</p>
+            </div>
+    """
 
     html_body = f"""
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
@@ -666,10 +678,7 @@ def send_student_rejection_email(student_email: str, student_name: str, lesson_d
                     </tr>
                 </table>
             </div>
-            <div style="background-color: #fefce8; border: 1px solid #fde68a; border-radius: 12px; padding: 18px; margin: 24px 0; text-align: center;">
-                <p style="font-size: 15px; color: #92400e; font-weight: 700; margin: 0;">💸 A full refund of <strong>${price:.2f}</strong> is being processed.</p>
-                <p style="font-size: 13px; color: #a16207; margin: 6px 0 0 0;">Please allow 5–10 business days for the credit to appear on your statement.</p>
-            </div>
+            {refund_box}
             <p style="font-size: 15px; color: #374151; text-align: center; margin: 24px 0;">
                 You are welcome to <a href="{os.getenv('FRONTEND_URL', 'https://martaspanishteacher.com')}" style="color: #4f46e5; font-weight: bold; text-decoration: underline;">book another time slot</a> that fits your schedule.
             </p>
@@ -871,4 +880,73 @@ def send_student_verification_email(email: str, name: str, verify_url: str):
     """
 
     return _send_email(email, subject, html_body)
+
+
+def send_package_confirmation_email(
+    student_email: str,
+    student_name: str,
+    lesson_type: str,
+    duration: int,
+    total_price: float,
+    credits: int = 5,
+):
+    """Confirmation email to student upon purchasing a 5-lesson bundle."""
+    subject = "📦 ¡Bono de 5 clases confirmado! — Spanish with Marta"
+    dashboard_url = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/dashboard"
+
+    html_body = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #4338ca; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 26px; font-weight: 800; margin: 0; line-height: 1.3;">¡Paquete de Clases Confirmado! 📦</h1>
+            <p style="color: #e0e7ff !important; font-size: 15px; margin: 8px 0 0 0; font-weight: 600;">{credits} clases de {lesson_type} ({duration} min) con 3% de descuento</p>
+        </div>
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 18px; color: #111827; margin: 0 0 12px 0;">¡Hola <strong>{student_name}</strong>!</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6; margin: 0 0 24px 0;">
+                Tu pago de <strong>€{total_price:.2f}</strong> se ha procesado correctamente. Ya tienes disponibles tus <strong>{credits} créditos</strong> para reservar tus clases cuando quieras desde tu panel.
+            </p>
+            <div style="text-align: center; margin: 32px 0 20px 0;">
+                <a href="{dashboard_url}"
+                   style="display: inline-block; background-color: #4f46e5; color: #ffffff !important; padding: 16px 36px;
+                          border-radius: 12px; text-decoration: none; font-size: 17px; font-weight: 800;">
+                    🗓️ Reservar mis clases ahora
+                </a>
+            </div>
+            <p style="font-size: 14px; color: #6b7280; text-align: center; border-top: 1px solid #f3f4f6; padding-top: 24px; margin-top: 24px;">
+                ¡Nos vemos pronto en clase! — Profe Marta ❤️
+            </p>
+        </div>
+    </div>
+    """
+    return _send_email(student_email, subject, html_body)
+
+
+def send_teacher_package_notification(
+    student_name: str,
+    student_email: str,
+    lesson_type: str,
+    duration: int,
+    total_price: float,
+):
+    """Notification to teacher when a student buys a 5-lesson bundle."""
+    subject = f"📦 Nuevo bono de 5 clases comprado: {student_name}"
+    teacher_email = get_teacher_email()
+
+    html_body = f"""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; border: 1px solid #e5e7eb;">
+        <div style="background-color: #1e1b4b; padding: 36px 24px; text-align: center;">
+            <h1 style="color: #ffffff !important; font-size: 24px; font-weight: 800; margin: 0;">¡Nuevo Bono de 5 Clases! 📦</h1>
+        </div>
+        <div style="padding: 32px 28px; background-color: #ffffff;">
+            <p style="font-size: 16px; color: #111827;">Hola Marta,</p>
+            <p style="font-size: 15px; color: #374151; line-height: 1.6;">
+                El alumno <strong>{student_name}</strong> ({student_email}) ha comprado un paquete de <strong>5 clases de {lesson_type} ({duration} min)</strong> por un total de <strong>€{total_price:.2f}</strong>.
+            </p>
+            <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
+                Recibirás las notificaciones individuales de cada clase cuando el alumno reserve los turnos en tu calendario.
+            </p>
+        </div>
+    </div>
+    """
+    return _send_email(teacher_email, subject, html_body)
 
