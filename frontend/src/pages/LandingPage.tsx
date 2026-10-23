@@ -1,18 +1,19 @@
 import { useState, useEffect } from 'react';
-import { Sparkles, Calendar, Zap, CheckCircle2, Play, Info, Menu, X } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { Sparkles, Calendar, Zap, CheckCircle2, Play, Info, Menu, X, GraduationCap, Gift, ShieldCheck, Tag, Calendar as CalendarIcon } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { API_URL, TEACHER_ID } from '../config';
 import { useLanguage } from '../i18n';
 import { useToast } from '../components/Toast';
 import LanguageSelector from '../components/LanguageSelector';
 import { StudentBookingCalendar } from '../components/calendar/StudentBookingCalendar';
-import { DurationSelector } from '../components/calendar/DurationSelector';
 import { ReviewsCarousel } from '../components/ReviewsCarousel';
+import { StudentPortalSection } from '../components/StudentPortalSection';
 
 const LandingPage = () => {
     const { t } = useLanguage();
     const { addToast } = useToast();
+    const navigate = useNavigate();
     const [showVideo, setShowVideo] = useState(false);
     const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
     const [selectedDuration, setSelectedDuration] = useState<number>(60);
@@ -21,6 +22,8 @@ const LandingPage = () => {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [dynamicPrice, setDynamicPrice] = useState<number | null>(null);
     const [priceLoading, setPriceLoading] = useState(false);
+    const [bookingMode, setBookingMode] = useState<'single' | 'package'>('single');
+    const [packageLoading, setPackageLoading] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         email: '',
@@ -28,6 +31,27 @@ const LandingPage = () => {
     });
 
     const studentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
+
+    // Populate name and email if student is already logged in, or restore pending package
+    useEffect(() => {
+        try {
+            const auth = JSON.parse(localStorage.getItem('student_auth') || 'null');
+            if (auth) {
+                setFormData(prev => ({
+                    ...prev,
+                    name: auth.name || prev.name,
+                    email: auth.email || prev.email,
+                }));
+            }
+            const pending = localStorage.getItem('pending_package_purchase');
+            if (pending) {
+                const parsed = JSON.parse(pending);
+                if (parsed.duration) setSelectedDuration(parsed.duration);
+                if (parsed.lesson_type) setFormData(prev => ({ ...prev, subject: parsed.lesson_type }));
+                setBookingMode('package');
+            }
+        } catch { /* ignore */ }
+    }, []);
 
     // Fetch dynamic price when lesson_type or duration changes
     useEffect(() => {
@@ -52,6 +76,63 @@ const LandingPage = () => {
         fetchPrice();
         return () => { cancelled = true; };
     }, [formData.subject, selectedDuration]);
+
+    const packagePricing = dynamicPrice !== null ? {
+        subtotal: Number((dynamicPrice * 5).toFixed(2)),
+        discount: Number((dynamicPrice * 5 * 0.03).toFixed(2)),
+        total: Number(((dynamicPrice * 5) * 0.97).toFixed(2)),
+        perLesson: Number((((dynamicPrice * 5) * 0.97) / 5).toFixed(2)),
+    } : null;
+
+    const handlePackagePurchase = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (packageLoading) return;
+
+        const currentAuth = JSON.parse(localStorage.getItem('student_auth') || 'null');
+        if (!currentAuth) {
+            // Save intention and navigate to login/register
+            localStorage.setItem('pending_package_purchase', JSON.stringify({
+                teacher_id: TEACHER_ID,
+                lesson_type: formData.subject,
+                duration: selectedDuration,
+            }));
+            addToast('info', t('booking.packageLoginPrompt') || 'Por favor, inicia sesión o crea una cuenta para asociar tu bono de clases.');
+            navigate(`/student/login?redirect=/#book`);
+            return;
+        }
+
+        setPackageLoading(true);
+        try {
+            const res = await axios.post(
+                `${API_URL}/packages/purchase`,
+                {
+                    teacher_id: TEACHER_ID,
+                    lesson_type: formData.subject,
+                    duration: selectedDuration,
+                },
+                {
+                    headers: {
+                        Authorization: `Bearer ${currentAuth.access_token}`,
+                    },
+                }
+            );
+
+            localStorage.removeItem('pending_package_purchase');
+            const stripeUrl = res.data.stripe_checkout_url;
+            if (stripeUrl) {
+                window.location.href = stripeUrl;
+                return;
+            }
+
+            addToast('success', t('booking.packageSuccess') || '¡Paquete adquirido con éxito!');
+            navigate('/dashboard');
+        } catch (err: any) {
+            const msg = err?.response?.data?.detail || err?.message || t('booking.packageError');
+            addToast('error', msg);
+        } finally {
+            setPackageLoading(false);
+        }
+    };
 
     const handleBooking = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -90,6 +171,13 @@ const LandingPage = () => {
         }
     };
 
+    const handleSubmitBookingForm = async (e: React.FormEvent) => {
+        if (bookingMode === 'package') {
+            return handlePackagePurchase(e);
+        }
+        return handleBooking(e);
+    };
+
     const scrollToBooking = () => {
         document.getElementById('book')?.scrollIntoView({ behavior: 'smooth' });
     };
@@ -107,6 +195,14 @@ const LandingPage = () => {
     const handleSingleLessonClick = (duration: number) => {
         setSelectedDuration(duration);
         setSelectedSlot(null);
+        setBookingMode('single');
+        scrollToBooking();
+    };
+
+    const handlePackageLessonClick = (duration: number) => {
+        setSelectedDuration(duration);
+        setSelectedSlot(null);
+        setBookingMode('package');
         scrollToBooking();
     };
 
@@ -145,6 +241,39 @@ const LandingPage = () => {
         }
     ];
 
+    const packageLessons = [
+        {
+            title: t('landing.packages.30min.title') || 'Bono 5 Clases · 30 Min',
+            desc: t('landing.packages.30min.desc') || '5 sesiones de 30 minutos. Ideal para practicar conversación regularmente y mantener tu español fluido.',
+            originalPrice: `${sym}${formatPrice(basePricesEUR[30] * 5)}`,
+            price: `${sym}${formatPrice(basePricesEUR[30] * 5 * 0.97)}`,
+            perLesson: `${sym}${formatPrice(basePricesEUR[30] * 0.97)}`,
+            icon: <Zap size={24} className="text-amber-500" />,
+            duration: 30 as const,
+            isPopular: false,
+        },
+        {
+            title: t('landing.packages.45min.title') || 'Bono 5 Clases · 45 Min',
+            desc: t('landing.packages.45min.desc') || '5 sesiones de 45 minutos. El equilibrio perfecto entre profundidad temática y flexibilidad de horarios.',
+            originalPrice: `${sym}${formatPrice(basePricesEUR[45] * 5)}`,
+            price: `${sym}${formatPrice(basePricesEUR[45] * 5 * 0.97)}`,
+            perLesson: `${sym}${formatPrice(basePricesEUR[45] * 0.97)}`,
+            icon: <Sparkles size={24} className="text-purple-500" />,
+            duration: 45 as const,
+            isPopular: false,
+        },
+        {
+            title: t('landing.packages.60min.title') || 'Bono 5 Clases · 60 Min',
+            desc: t('landing.packages.60min.desc') || '5 sesiones completas de 60 minutos. Máxima inmersión y avance rápido con atención 100% personalizada.',
+            originalPrice: `${sym}${formatPrice(basePricesEUR[60] * 5)}`,
+            price: `${sym}${formatPrice(basePricesEUR[60] * 5 * 0.97)}`,
+            perLesson: `${sym}${formatPrice(basePricesEUR[60] * 0.97)}`,
+            icon: <Gift size={24} className="text-indigo-500" />,
+            duration: 60 as const,
+            isPopular: true,
+        }
+    ];
+
     const closeMobileMenu = () => setMobileMenuOpen(false);
 
     return (
@@ -175,13 +304,14 @@ const LandingPage = () => {
                             <span className="hidden xl:inline">{t('nav.teacherDashboard') || 'Teacher Dashboard'}</span>
                         </Link>
                         {studentAuth ? (
-                            <Link to="/dashboard" className="px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 flex items-center gap-2 text-sm">
-                                <Sparkles size={18} />
-                                {t('dashboard.studentTitle') || 'Student Dashboard'}
+                            <Link to="/dashboard" className="px-4 py-2 bg-indigo-50 text-indigo-700 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-200/80 flex items-center gap-2 text-sm shadow-xs hover:shadow-sm">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('dashboard.studentTitle') || 'Student Dashboard'}</span>
                             </Link>
                         ) : (
-                            <Link to="/student/login" className="px-4 py-2 bg-indigo-50 text-indigo-600 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-100 text-sm">
-                                Student Login
+                            <Link to="/student/login" className="px-4 py-2 bg-indigo-50 text-indigo-700 font-bold rounded-full hover:bg-indigo-100 transition border border-indigo-200/80 flex items-center gap-2 text-sm shadow-xs hover:shadow-sm">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('nav.studentLogin') || 'Student Login'}</span>
                             </Link>
                         )}
                         <Link to={`/book/${TEACHER_ID}`} className="px-5 py-2 bg-indigo-600 text-white font-bold rounded-full hover:bg-indigo-700 transition shadow-lg hover:shadow-indigo-500/30 text-sm">
@@ -206,12 +336,14 @@ const LandingPage = () => {
                             {t('nav.teacherDashboard') || 'Teacher Dashboard'}
                         </Link>
                         {studentAuth ? (
-                            <Link to="/dashboard" onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition">
-                                {t('dashboard.studentTitle') || 'Student Dashboard'}
+                            <Link to="/dashboard" onClick={closeMobileMenu} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('dashboard.studentTitle') || 'Student Dashboard'}</span>
                             </Link>
                         ) : (
-                            <Link to="/student/login" onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-xl hover:bg-indigo-100 transition text-center">
-                                Student Login
+                            <Link to="/student/login" onClick={closeMobileMenu} className="flex items-center justify-center gap-2 px-4 py-2.5 bg-indigo-50 text-indigo-700 font-bold rounded-xl hover:bg-indigo-100 transition text-center">
+                                <GraduationCap size={18} className="text-indigo-600" />
+                                <span>{t('nav.studentLogin') || 'Student Login'}</span>
                             </Link>
                         )}
                         <Link to={`/book/${TEACHER_ID}`} onClick={closeMobileMenu} className="block px-4 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition text-center">
@@ -244,6 +376,20 @@ const LandingPage = () => {
                                 <CheckCircle2 size={20} className="text-indigo-500" />
                                 {t('landing.trust')}
                             </div>
+                        </div>
+
+                        {/* Student Portal feature callout in Hero */}
+                        <div className="mt-8 flex items-center justify-center lg:justify-start">
+                            <a 
+                                href="#student-portal" 
+                                className="inline-flex items-center gap-2.5 px-4 py-2.5 bg-white/85 hover:bg-white text-gray-700 hover:text-indigo-600 text-xs sm:text-sm font-bold rounded-2xl border border-indigo-100 shadow-xs hover:shadow-sm transition-all group backdrop-blur-sm"
+                            >
+                                <span className="p-1 rounded-lg bg-indigo-50 text-indigo-600 group-hover:bg-indigo-600 group-hover:text-white transition-colors">
+                                    <GraduationCap size={15} />
+                                </span>
+                                <span>{t('landing.hero.portalPill')}</span>
+                                <span className="text-indigo-400 group-hover:text-indigo-600 group-hover:translate-x-1 transition-transform">→</span>
+                            </a>
                         </div>
                     </div>
 
@@ -307,12 +453,53 @@ const LandingPage = () => {
                 {/* Book a Lesson Section */}
                 <section id="book-a-lesson" className="max-w-6xl mx-auto mb-20 sm:mb-32 scroll-mt-24">
                     <div className="text-center mb-10 sm:mb-16">
-                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.single.title')}</h2>
+                        <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-4">
+                            {bookingMode === 'package'
+                                ? (t('landing.packages.sectionTitle') || 'Bonos de 5 Clases con Descuento')
+                                : t('landing.single.title')}
+                        </h2>
                         <div className="w-20 sm:w-24 h-1.5 bg-indigo-600 mx-auto rounded-full mb-4 sm:mb-6"></div>
                         <p className="text-base sm:text-lg text-gray-500 font-medium max-w-xl mx-auto">
-                            {t('landing.single.subtitle')}
+                            {bookingMode === 'package'
+                                ? (t('landing.packages.sectionSubtitle') || 'Ahorra un 3% reservando un bono de 5 sesiones. Disfruta de flexibilidad total para programar tus clases sin caducidad.')
+                                : t('landing.single.subtitle')}
                         </p>
-                        <div className="flex justify-center gap-2 mt-4 flex-wrap px-2">
+
+                        {/* Mode Switcher Tabs */}
+                        <div className="inline-flex p-1.5 bg-gray-200/80 rounded-2xl gap-2 mt-6 shadow-inner max-w-full">
+                            <button
+                                type="button"
+                                onClick={() => setBookingMode('single')}
+                                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
+                                    bookingMode === 'single'
+                                        ? 'bg-white text-indigo-600 shadow-md scale-[1.02]'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <CalendarIcon size={16} />
+                                <span>{t('booking.modeSingle') || 'Clase individual'}</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBookingMode('package')}
+                                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer relative ${
+                                    bookingMode === 'package'
+                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20 scale-[1.02]'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <Gift size={16} className={bookingMode === 'package' ? 'text-amber-300' : 'text-indigo-500'} />
+                                <span>{t('booking.modePackage') || 'Bono 5 Clases'}</span>
+                                <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full tracking-wider ${
+                                    bookingMode === 'package' ? 'bg-amber-400 text-amber-950' : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                    {t('booking.discountBadge') || '-3% Dto.'}
+                                </span>
+                            </button>
+                        </div>
+
+                        {/* Currency Selector */}
+                        <div className="flex justify-center gap-2 mt-6 flex-wrap px-2">
                             {(['USD', 'EUR', 'GBP', 'CZK'] as const).map((c) => (
                                 <button
                                     key={c}
@@ -328,140 +515,336 @@ const LandingPage = () => {
                             ))}
                         </div>
                     </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
-                        {singleLessons.map((lesson, i) => (
-                            <div key={i} className="bg-white p-6 sm:p-10 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-lg hover:border-indigo-300 transition-all duration-300 flex flex-col h-full">
-                                <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-                                    <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner bg-indigo-50">
-                                        {lesson.icon}
+
+                    {bookingMode === 'single' ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+                            {singleLessons.map((lesson, i) => (
+                                <div key={i} className="bg-white p-6 sm:p-10 rounded-2xl sm:rounded-3xl border border-gray-100 shadow-lg hover:border-indigo-300 transition-all duration-300 flex flex-col h-full">
+                                    <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
+                                        <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner bg-indigo-50">
+                                            {lesson.icon}
+                                        </div>
+                                        <h3 className="text-lg sm:text-2xl font-black text-gray-800">{lesson.title}</h3>
                                     </div>
-                                    <h3 className="text-lg sm:text-2xl font-black text-gray-800">{lesson.title}</h3>
-                                </div>
-                                <p className="text-sm sm:text-base text-gray-600 font-medium leading-relaxed mb-6 sm:mb-8 flex-grow">{lesson.desc}</p>
-                                <div className="mt-auto">
-                                    <div className="text-2xl sm:text-3xl font-black text-indigo-600 mb-4 sm:mb-6 bg-indigo-50 p-4 sm:p-5 rounded-xl border border-indigo-100 text-center">
-                                        {lesson.price}
+                                    <p className="text-sm sm:text-base text-gray-600 font-medium leading-relaxed mb-6 sm:mb-8 flex-grow">{lesson.desc}</p>
+                                    <div className="mt-auto">
+                                        <div className="text-2xl sm:text-3xl font-black text-indigo-600 mb-4 sm:mb-6 bg-indigo-50 p-4 sm:p-5 rounded-xl border border-indigo-100 text-center">
+                                            {lesson.price}
+                                        </div>
+                                        <button
+                                            onClick={() => handleSingleLessonClick(lesson.duration)}
+                                            className="w-full py-3 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm sm:text-base bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30 cursor-pointer"
+                                        >
+                                            <CalendarIcon size={18} />
+                                            {t('landing.single.bookButton')}
+                                        </button>
                                     </div>
-                                    <button
-                                        onClick={() => handleSingleLessonClick(lesson.duration)}
-                                        className="w-full py-3 sm:py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all text-sm sm:text-base bg-indigo-600 text-white hover:bg-indigo-700 shadow-lg hover:shadow-indigo-500/30"
-                                    >
-                                        <Calendar size={18} />
-                                        {t('landing.single.bookButton')}
-                                    </button>
                                 </div>
-                            </div>
-                        ))}
-                    </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
+                            {packageLessons.map((pkg, i) => (
+                                <div
+                                    key={i}
+                                    className={`bg-white p-6 sm:p-10 rounded-2xl sm:rounded-3xl shadow-xl transition-all duration-300 flex flex-col h-full relative ${
+                                        pkg.isPopular
+                                            ? 'border-2 border-indigo-500 shadow-indigo-100 ring-4 ring-indigo-50'
+                                            : 'border border-gray-100 hover:border-purple-300'
+                                    }`}
+                                >
+                                    {pkg.isPopular && (
+                                        <div className="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-gradient-to-r from-indigo-600 to-purple-600 text-white text-[11px] font-black uppercase tracking-wider py-1 px-3.5 rounded-full shadow-md flex items-center gap-1.5">
+                                            <Sparkles size={12} className="text-amber-300" />
+                                            <span>{t('booking.discountBadge') || '-3% Dto.'} · Popular</span>
+                                        </div>
+                                    )}
+                                    <div className="flex items-center justify-between mb-4 sm:mb-6">
+                                        <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl flex items-center justify-center shadow-inner bg-gradient-to-br from-indigo-50 to-purple-50">
+                                            {pkg.icon}
+                                        </div>
+                                        <span className="text-[11px] font-black uppercase tracking-wider px-2.5 py-1 rounded-full bg-amber-100 text-amber-900 border border-amber-200">
+                                            5 Clases · {t('booking.discountBadge') || '-3%'}
+                                        </span>
+                                    </div>
+                                    <h3 className="text-lg sm:text-2xl font-black text-gray-800 mb-2">{pkg.title}</h3>
+                                    <p className="text-sm sm:text-base text-gray-600 font-medium leading-relaxed mb-6 sm:mb-8 flex-grow">{pkg.desc}</p>
+                                    <div className="mt-auto">
+                                        <div className="bg-gradient-to-br from-indigo-50 via-purple-50/50 to-indigo-50 p-4 sm:p-5 rounded-2xl border border-indigo-100 text-center mb-4 sm:mb-6">
+                                            <div className="flex items-center justify-center gap-2 mb-1">
+                                                <span className="text-sm sm:text-base text-gray-400 line-through font-bold">{pkg.originalPrice}</span>
+                                                <span className="text-2xl sm:text-3xl font-black text-indigo-700">{pkg.price}</span>
+                                            </div>
+                                            <p className="text-xs font-bold text-indigo-600">
+                                                {pkg.perLesson} {t('landing.packages.perLesson') || 'por clase'}
+                                            </p>
+                                        </div>
+                                        <button
+                                            onClick={() => handlePackageLessonClick(pkg.duration)}
+                                            className="w-full py-3 sm:py-4 rounded-xl font-black flex items-center justify-center gap-2 transition-all text-sm sm:text-base bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 shadow-lg hover:shadow-indigo-500/30 cursor-pointer"
+                                        >
+                                            <Gift size={18} className="text-amber-300" />
+                                            {t('landing.packages.bookButton') || 'Reservar Bono'}
+                                        </button>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    )}
                 </section>
 
                 {/* Booking Section */}
-                <section id="book" className="max-w-7xl mx-auto mb-20 sm:mb-32">
+                <section id="book" className="max-w-7xl mx-auto mb-20 sm:mb-32 scroll-mt-24">
                     <div className="text-center mb-10 sm:mb-16">
                         <h2 className="text-3xl sm:text-4xl md:text-5xl font-black text-gray-900 mb-4">{t('landing.booking.title')}</h2>
                         <div className="w-20 sm:w-24 h-1.5 bg-indigo-600 mx-auto rounded-full mb-4 sm:mb-6"></div>
                         <p className="text-base sm:text-xl text-gray-500 font-medium max-w-2xl mx-auto leading-relaxed px-4">
-                            {t('landing.booking.subtitle')}
+                            {bookingMode === 'package'
+                                ? (t('booking.pageSubtitle') || 'Elige si prefieres una clase suelta o ahorrar con un bono de 5 sesiones.')
+                                : t('landing.booking.subtitle')}
                         </p>
+
+                        {/* Mode Switcher Tabs for Booking Section */}
+                        <div className="inline-flex p-1.5 bg-gray-200/80 rounded-2xl gap-2 mt-6 shadow-inner max-w-full">
+                            <button
+                                type="button"
+                                onClick={() => setBookingMode('single')}
+                                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer ${
+                                    bookingMode === 'single'
+                                        ? 'bg-white text-indigo-600 shadow-md scale-[1.02]'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <CalendarIcon size={16} />
+                                <span>{t('booking.modeSingle') || 'Clase individual'}</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setBookingMode('package')}
+                                className={`flex items-center gap-2 px-5 py-3 rounded-xl font-black text-xs sm:text-sm transition-all cursor-pointer relative ${
+                                    bookingMode === 'package'
+                                        ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-md shadow-indigo-500/20 scale-[1.02]'
+                                        : 'text-gray-600 hover:text-gray-900'
+                                }`}
+                            >
+                                <Gift size={16} className={bookingMode === 'package' ? 'text-amber-300' : 'text-indigo-500'} />
+                                <span>{t('booking.modePackage') || 'Bono 5 Clases'}</span>
+                                <span className={`text-[10px] uppercase font-black px-2 py-0.5 rounded-full tracking-wider ${
+                                    bookingMode === 'package' ? 'bg-amber-400 text-amber-950' : 'bg-amber-100 text-amber-800'
+                                }`}>
+                                    {t('booking.discountBadge') || '-3% Dto.'}
+                                </span>
+                            </button>
+                        </div>
                     </div>
 
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 sm:gap-12 items-start">
-                        {/* Left: Custom Calendar */}
-                        <div className="lg:col-span-8">
-                            <DurationSelector 
-                                selected={selectedDuration}
-                                onChange={(mins) => {
-                                    setSelectedDuration(mins);
-                                    setSelectedSlot(null);
-                                }}
-                            />
-                            <StudentBookingCalendar
-                                teacherId={TEACHER_ID}
-                                onSlotSelect={setSelectedSlot}
-                                durationMinutes={selectedDuration}
-                            />
+                        {/* Left: Custom Calendar or Package Details */}
+                        <div className="lg:col-span-8 space-y-6">
+                            {bookingMode === 'package' ? (
+                                <div className="space-y-6">
+                                    {/* Package Hero Card */}
+                                    <div className="bg-gradient-to-br from-indigo-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-10 shadow-xl border border-indigo-800/40 relative overflow-hidden">
+                                        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-64 h-64 bg-indigo-500/20 rounded-full blur-3xl pointer-events-none" />
+                                        <div className="relative z-10 space-y-4">
+                                            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-amber-400/20 border border-amber-300/30 text-amber-300 text-xs font-black uppercase tracking-wider">
+                                                <Sparkles size={14} />
+                                                <span>{t('booking.packageBadgeDiscount') || '3% de Descuento Directo Incluido'}</span>
+                                            </div>
+                                            <h2 className="text-2xl sm:text-4xl font-black tracking-tight text-white">
+                                                {t('booking.packageHeroTitle', { duration: String(selectedDuration) }) || `Bono de 5 Clases de ${selectedDuration} Minutos`}
+                                            </h2>
+                                            <p className="text-sm sm:text-base text-indigo-200 leading-relaxed max-w-2xl">
+                                                {t('booking.packageHeroDesc') || 'Asegura tu ritmo de aprendizaje y ahorra. Compra tus 5 créditos hoy en un único pago y programa cada fecha cuando mejor te convenga desde tu portal de estudiante.'}
+                                            </p>
+                                            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4">
+                                                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-start gap-3">
+                                                    <CheckCircle2 size={20} className="text-emerald-400 shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="font-bold text-xs uppercase text-indigo-200 tracking-wider">{t('booking.package5Lessons') || '5 Clases'}</p>
+                                                        <p className="text-sm font-semibold text-white mt-0.5">{selectedDuration} min · {formData.subject}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-start gap-3">
+                                                    <ShieldCheck size={20} className="text-emerald-400 shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="font-bold text-xs uppercase text-indigo-200 tracking-wider">{t('booking.packageTotalFlexibility') || 'Flexibilidad Total'}</p>
+                                                        <p className="text-sm font-semibold text-white mt-0.5">{t('booking.packageNoExpiry') || 'Sin caducidad de créditos'}</p>
+                                                    </div>
+                                                </div>
+                                                <div className="bg-white/10 backdrop-blur-md rounded-2xl p-4 border border-white/10 flex items-start gap-3">
+                                                    <Tag size={20} className="text-emerald-400 shrink-0 mt-0.5" />
+                                                    <div>
+                                                        <p className="font-bold text-xs uppercase text-indigo-200 tracking-wider">{t('booking.packageSave3') || 'Ahorro 3%'}</p>
+                                                        <p className="text-sm font-semibold text-white mt-0.5">{t('booking.packageDiscountedPerLesson') || 'Precio reducido por clase'}</p>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Calendar availability preview */}
+                                    <div className="space-y-3">
+                                        <div className="flex items-center gap-2 px-2 text-xs font-bold text-gray-500 uppercase tracking-wider">
+                                            <CalendarIcon size={14} className="text-indigo-600" />
+                                            <span>{t('booking.calendarAvailabilityPreview', { name: 'Marta' }) || 'Disponibilidad habitual de Marta (Vista previa de horarios)'}</span>
+                                        </div>
+                                        <StudentBookingCalendar
+                                            teacherId={TEACHER_ID}
+                                            onSlotSelect={setSelectedSlot}
+                                            selectedSlot={selectedSlot}
+                                            durationMinutes={selectedDuration}
+                                            onDurationChange={(mins) => {
+                                                setSelectedDuration(mins);
+                                                setSelectedSlot(null);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            ) : (
+                                <StudentBookingCalendar
+                                    teacherId={TEACHER_ID}
+                                    onSlotSelect={setSelectedSlot}
+                                    selectedSlot={selectedSlot}
+                                    durationMinutes={selectedDuration}
+                                    onDurationChange={(mins) => {
+                                        setSelectedDuration(mins);
+                                        setSelectedSlot(null);
+                                    }}
+                                />
+                            )}
                         </div>
 
                         {/* Right: Booking Form / Payment */}
                         <div className="lg:col-span-4 lg:sticky lg:top-32">
                             <div className="bg-white p-6 sm:p-10 rounded-[2rem] sm:rounded-[2.5rem] shadow-2xl border border-gray-100 relative overflow-hidden">
                                 <h2 className="text-2xl sm:text-3xl font-black text-gray-900 mb-6 sm:mb-8 relative z-10 flex items-center gap-3">
-                                    <Info size={24} className="text-indigo-600" />
-                                    {t('booking.confirmTitle')}
+                                    {bookingMode === 'package' ? (
+                                        <>
+                                            <Gift size={26} className="text-indigo-600" />
+                                            <span>{t('booking.modePackage') || 'Bono 5 Clases'}</span>
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Info size={24} className="text-indigo-600" />
+                                            <span>{t('booking.confirmTitle')}</span>
+                                        </>
+                                    )}
                                 </h2>
 
-                                <form onSubmit={handleBooking} className="flex flex-col gap-4 sm:gap-6 relative z-10">
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.name')}</label>
-                                                <input
-                                                    required
-                                                    type="text"
-                                                    className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 text-sm sm:text-base"
-                                                    placeholder={t('booking.form.namePlaceholder')}
-                                                    value={formData.name}
-                                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.email')}</label>
-                                                <input
-                                                    required
-                                                    type="email"
-                                                    className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 text-sm sm:text-base"
-                                                    placeholder={t('booking.form.emailPlaceholder')}
-                                                    value={formData.email}
-                                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                                />
-                                            </div>
-                                            <div className="space-y-2">
-                                                <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.subject')}</label>
-                                                <select
-                                                    className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 appearance-none text-sm sm:text-base"
-                                                    value={formData.subject}
-                                                    onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
-                                                >
-                                                    <option value="Conversación">🗣️ {t('booking.subjects.conversation')}</option>
-                                                    <option value="Curso Básico">📚 {t('booking.subjects.basic_course')}</option>
-                                                    <option value="Grammar">📝 Grammar</option>
-                                                    <option value="Examen DELE">🎓 Examen DELE</option>
-                                                    <option value="Entrevista de Trabajo">💼 Entrevista de Trabajo</option>
-                                                </select>
-                                            </div>
+                                <form onSubmit={handleSubmitBookingForm} className="flex flex-col gap-4 sm:gap-6 relative z-10">
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.name')}</label>
+                                        <input
+                                            required
+                                            type="text"
+                                            className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 text-sm sm:text-base"
+                                            placeholder={t('booking.form.namePlaceholder')}
+                                            value={formData.name}
+                                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.email')}</label>
+                                        <input
+                                            required
+                                            type="email"
+                                            className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 text-sm sm:text-base"
+                                            placeholder={t('booking.form.emailPlaceholder')}
+                                            value={formData.email}
+                                            onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="space-y-2">
+                                        <label className="block text-xs font-black text-gray-400 uppercase tracking-widest ml-1">{t('booking.form.subject')}</label>
+                                        <select
+                                            className="w-full px-4 sm:px-6 py-3 sm:py-4 bg-gray-50 rounded-2xl border-2 border-transparent focus:border-indigo-600 focus:bg-white transition-all outline-none font-bold text-gray-700 appearance-none text-sm sm:text-base"
+                                            value={formData.subject}
+                                            onChange={(e) => setFormData({ ...formData, subject: e.target.value })}
+                                        >
+                                            <option value="Conversación">🗣️ {t('booking.subjects.conversation')}</option>
+                                            <option value="Curso Básico">📚 {t('booking.subjects.basic_course')}</option>
+                                            <option value="Grammar">📝 {t('booking.subjects.grammar') || 'Gramática'}</option>
+                                            <option value="Examen DELE">🎓 {t('booking.subjects.dele') || 'Examen DELE'}</option>
+                                            <option value="Entrevista de Trabajo">💼 {t('booking.subjects.interview') || 'Entrevista de Trabajo'}</option>
+                                        </select>
+                                    </div>
 
-                                            {/* Dynamic price display */}
-                                            <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 text-center">
-                                                {priceLoading ? (
-                                                    <span className="text-indigo-400 font-bold text-sm animate-pulse">Calculating price...</span>
-                                                ) : dynamicPrice !== null ? (
-                                                    <div>
-                                                        <span className="text-2xl sm:text-3xl font-black text-indigo-600">{sym}{(dynamicPrice * rate).toFixed(2)}</span>
-                                                        <p className="text-xs text-indigo-400 font-medium mt-1">{selectedDuration} min · {formData.subject}</p>
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-indigo-400 font-bold text-sm">—</span>
+                                    {/* Dynamic price / package breakdown display */}
+                                    {bookingMode === 'package' ? (
+                                        <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100 text-left space-y-3">
+                                            <div className="flex items-center justify-between text-xs text-gray-600 font-bold">
+                                                <span>{t('booking.packageSubtotal', { price: dynamicPrice !== null ? `${sym}${(dynamicPrice * rate).toFixed(2)}` : '...' })}</span>
+                                                <span>{packagePricing !== null ? `${sym}${(packagePricing.subtotal * rate).toFixed(2)}` : '...'}</span>
+                                            </div>
+                                            <div className="flex items-center justify-between text-xs font-black text-emerald-700">
+                                                <span className="flex items-center gap-1">
+                                                    <Tag size={13} />
+                                                    <span>{t('booking.packageSpecialDiscount') || 'Descuento Especial (3%):'}</span>
+                                                </span>
+                                                <span>-{packagePricing !== null ? `${sym}${(packagePricing.discount * rate).toFixed(2)}` : '...'}</span>
+                                            </div>
+                                            <div className="pt-2 border-t border-indigo-200/60 flex items-baseline justify-between">
+                                                <div>
+                                                    <span className="text-2xl sm:text-3xl font-black text-indigo-700">
+                                                        {packagePricing !== null ? `${sym}${(packagePricing.total * rate).toFixed(2)}` : '...'}
+                                                    </span>
+                                                    <p className="text-[11px] text-indigo-500 font-bold mt-0.5">
+                                                        {t('booking.packagePerLesson', { price: packagePricing !== null ? `${sym}${(packagePricing.perLesson * rate).toFixed(2)}` : '...' })}
+                                                    </p>
+                                                </div>
+                                                <span className="text-xs uppercase font-black bg-indigo-600 text-white px-2.5 py-1 rounded-full shadow-xs">
+                                                    {t('booking.package5Lessons') || '5 Clases'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    ) : (
+                                        <div className="bg-indigo-50 rounded-2xl p-4 border border-indigo-100 text-center">
+                                            {priceLoading ? (
+                                                <span className="text-indigo-400 font-bold text-sm animate-pulse">{t('booking.calculatingPrice') || 'Calculating price...'}</span>
+                                            ) : dynamicPrice !== null ? (
+                                                <div>
+                                                    <span className="text-2xl sm:text-3xl font-black text-indigo-600">{sym}{(dynamicPrice * rate).toFixed(2)}</span>
+                                                    <p className="text-xs text-indigo-400 font-medium mt-1">{selectedDuration} min · {formData.subject}</p>
+                                                </div>
+                                            ) : (
+                                                <span className="text-indigo-400 font-bold text-sm">—</span>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    <div className="pt-2 sm:pt-4">
+                                        {bookingMode === 'package' ? (
+                                            <button
+                                                disabled={packageLoading || dynamicPrice === null}
+                                                type="submit"
+                                                className="w-full py-4 sm:py-5 rounded-2xl font-black text-lg shadow-xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
+                                            >
+                                                {packageLoading ? (t('booking.processingPackage') || 'Procesando Bono...') : (
+                                                    t('booking.buyPackageBtn', { total: packagePricing ? `${sym}${(packagePricing.total * rate).toFixed(2)}` : '' })
                                                 )}
-                                            </div>
-
-                                            <div className="pt-2 sm:pt-4">
-                                                <button
-                                                    disabled={!selectedSlot || submitting}
-                                                    type="submit"
-                                                    className={`w-full py-4 sm:py-5 rounded-2xl font-black text-lg sm:text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${selectedSlot
-                                                        ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1'
-                                                        : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
-                                                        }`}
-                                                >
-                                                    {submitting ? t('booking.processing') : (
-                                                        selectedSlot && dynamicPrice !== null
-                                                            ? `Pay ${sym}${(dynamicPrice * rate).toFixed(2)} · Confirm Booking`
-                                                            : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot'))
-                                                    )}
-                                                </button>
-                                            </div>
-                                            <p className="text-center text-xs font-bold text-gray-400 mt-1 sm:mt-2">
-                                                {t('booking.manualPaymentNote')}
-                                            </p>
-                                        </form>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                disabled={!selectedSlot || submitting}
+                                                type="submit"
+                                                className={`w-full py-4 sm:py-5 rounded-2xl font-black text-lg sm:text-xl shadow-xl transition-all active:scale-95 flex items-center justify-center gap-3 ${selectedSlot
+                                                    ? 'bg-indigo-600 text-white hover:bg-indigo-700 hover:shadow-indigo-500/40 hover:-translate-y-1 cursor-pointer'
+                                                    : 'bg-gray-100 text-gray-400 cursor-not-allowed shadow-none'
+                                                    }`}
+                                            >
+                                                {submitting ? t('booking.processing') : (
+                                                    selectedSlot && dynamicPrice !== null
+                                                        ? `Pay ${sym}${(dynamicPrice * rate).toFixed(2)} · Confirm Booking`
+                                                        : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot'))
+                                                )}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <p className="text-center text-xs font-bold text-gray-400 mt-1 sm:mt-2">
+                                        {t('booking.manualPaymentNote')}
+                                    </p>
+                                </form>
 
                                 <div className="absolute -bottom-20 -right-20 w-48 sm:w-64 h-48 sm:h-64 bg-indigo-50 rounded-full blur-3xl opacity-50 -z-0"></div>
                             </div>
@@ -469,7 +852,10 @@ const LandingPage = () => {
                     </div>
                 </section>
 
-                {/* Reviews Carousel */}
+                {/* Exclusive Student Portal Showcase Section */}
+                <StudentPortalSection studentAuth={studentAuth} />
+
+                {/* Reviews Carousel ("What Students Say") */}
                 <ReviewsCarousel />
 
                 {/* Footer */}
@@ -484,7 +870,17 @@ const LandingPage = () => {
                         </Link>
                         
                         <div className="flex flex-col md:flex-row items-center gap-4 sm:gap-8">
-                            <div className="flex gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-gray-400">
+                            <div className="flex flex-wrap justify-center items-center gap-4 sm:gap-6 text-xs sm:text-sm font-bold text-gray-400">
+                                <Link 
+                                    to={studentAuth ? "/dashboard" : "/student/login"} 
+                                    className="text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 transition"
+                                >
+                                    <GraduationCap size={15} />
+                                    <span>{studentAuth ? t('dashboard.studentTitle') : (t('nav.studentLogin') || 'Portal del Estudiante')}</span>
+                                </Link>
+                                <a href="#student-portal" className="hover:text-indigo-600 transition">
+                                    {t('landing.studentPortal.badge')}
+                                </a>
                                 <Link to="/legal" className="hover:text-indigo-600 transition">Aviso Legal</Link>
                                 <Link to="/privacy" className="hover:text-indigo-600 transition">Privacidad</Link>
                                 <Link to="/cookies" className="hover:text-indigo-600 transition">Cookies</Link>

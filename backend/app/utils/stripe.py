@@ -168,6 +168,69 @@ def create_checkout_session(
         return None, None
 
 
+def create_package_checkout_session(
+    package_id: str,
+    total_amount_eur: float,
+    lesson_type: str,
+    duration: int,
+    student_name: str,
+    student_email: str,
+    success_url: Optional[str] = None,
+    cancel_url: Optional[str] = None,
+) -> Tuple[Optional[str], Optional[str]]:
+    """
+    Create a Stripe Checkout Session for a 5-lesson bundle using dynamic price_data.
+    """
+    if not is_stripe_configured():
+        print("[STRIPE] Stripe not configured — skipping Checkout Session creation.")
+        return None, None
+
+    frontend_url = _get_frontend_url()
+    if success_url is None:
+        success_url = f"{frontend_url}/payment-success?session_id={{CHECKOUT_SESSION_ID}}&type=package"
+    if cancel_url is None:
+        cancel_url = f"{frontend_url}/payment-cancelled"
+
+    try:
+        stripe.api_key = _get_secret_key()
+        unit_amount_cents = int(round(total_amount_eur * 100))
+
+        session = stripe.checkout.Session.create(
+            mode="payment",
+            customer_email=student_email,
+            line_items=[
+                {
+                    "price_data": {
+                        "currency": "eur",
+                        "product_data": {
+                            "name": f"Paquete 5 Clases ({lesson_type} - {duration} min)",
+                            "description": f"Bono de 5 clases de {duration} min con 3% de descuento",
+                        },
+                        "unit_amount": unit_amount_cents,
+                    },
+                    "quantity": 1,
+                }
+            ],
+            metadata={
+                "package_id": package_id,
+                "duration": str(duration),
+                "lesson_type": lesson_type,
+                "student_name": student_name,
+                "student_email": student_email,
+                "payment_type": "package",
+            },
+            success_url=success_url,
+            cancel_url=cancel_url,
+        )
+
+        print(f"[STRIPE] Package Checkout Session created: {session.id} -> {session.url}")
+        return session.id, session.url
+
+    except stripe.StripeError as e:
+        print(f"[STRIPE ERROR] Failed to create Package Checkout Session: {e}")
+        return None, None
+
+
 # ── Session metadata updates (for reschedule, etc.) ─────────────────────────
 
 def update_session_metadata(session_id: str, metadata_updates: dict) -> bool:
