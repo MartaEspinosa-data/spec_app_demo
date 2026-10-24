@@ -28,8 +28,6 @@ LESSON_TYPE_PRICING: Dict[str, Dict[int, float]] = {
     "Conversación":    {30: 16.34, 45: 23.56, 60: 31.00},
     "Conversacion":    {30: 16.34, 45: 23.56, 60: 31.00},
     "Conversation":    {30: 16.34, 45: 23.56, 60: 31.00},
-    "Grammar":         {30: 16.34, 45: 23.56, 60: 31.00},
-    "Gramática":       {30: 16.34, 45: 23.56, 60: 31.00},
 
     # Structured courses — higher price (curriculum preparation)
     "Curso Básico":    {30: 18.00, 45: 25.50, 60: 33.00},
@@ -38,7 +36,6 @@ LESSON_TYPE_PRICING: Dict[str, Dict[int, float]] = {
 
     # Premium / specialized types
     "Examen DELE":           {30: 20.00, 45: 28.00, 60: 36.00},
-    "Entrevista de Trabajo": {30: 20.00, 45: 28.00, 60: 36.00},
 }
 
 def get_lesson_price(

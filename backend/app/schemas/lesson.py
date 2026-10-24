@@ -30,9 +30,6 @@ VALID_LESSON_TYPES = [
     "Basic Course",
     "Conversation",
     "Examen DELE",
-    "Entrevista de Trabajo",
-    "Grammar",
-    "Gramática",
 ]
 
 VALID_DURATIONS = {30, 45, 60}
