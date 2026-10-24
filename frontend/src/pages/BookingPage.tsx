@@ -392,7 +392,7 @@ const BookingPage = () => {
                                 {bookingMode === 'package' ? (
                                     <div className="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 border border-indigo-100 text-left space-y-3">
                                         <div className="flex items-center justify-between text-xs text-gray-600 font-bold">
-                                            <span>{t('booking.packageSubtotal', { price: dynamicPrice?.toFixed(2) || '...' })}</span>
+                                            <span>{t('booking.packageSubtotal', { price: dynamicPrice !== null ? `€${dynamicPrice.toFixed(2)}` : '...' })}</span>
                                             <span>€{packagePricing?.subtotal.toFixed(2) || '...'}</span>
                                         </div>
                                         <div className="flex items-center justify-between text-xs font-black text-emerald-700">
@@ -408,7 +408,7 @@ const BookingPage = () => {
                                                     €{packagePricing?.total.toFixed(2) || '...'}
                                                 </span>
                                                 <p className="text-[11px] text-indigo-500 font-bold mt-0.5">
-                                                    {t('booking.packagePerLesson', { price: packagePricing?.perLesson.toFixed(2) || '...' })}
+                                                    {t('booking.packagePerLesson', { price: packagePricing !== null ? `€${packagePricing.perLesson.toFixed(2)}` : '...' })}
                                                 </p>
                                             </div>
                                             <span className="text-xs uppercase font-black bg-indigo-600 text-white px-2.5 py-1 rounded-full shadow-xs">
@@ -440,7 +440,7 @@ const BookingPage = () => {
                                             type="submit"
                                             className="w-full py-4 sm:py-5 rounded-2xl font-black text-lg shadow-xl bg-gradient-to-r from-indigo-600 via-indigo-600 to-purple-600 text-white hover:from-indigo-500 hover:to-purple-500 hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all active:scale-95 flex items-center justify-center gap-2 cursor-pointer"
                                         >
-                                            {packageLoading ? t('booking.processingPackage') : t('booking.buyPackageBtn', { total: packagePricing?.total.toFixed(2) || '' })}
+                                            {packageLoading ? t('booking.processingPackage') : t('booking.buyPackageBtn', { total: packagePricing !== null ? `€${packagePricing.total.toFixed(2)}` : '' })}
                                         </button>
                                     ) : (
                                         <button
@@ -453,7 +453,7 @@ const BookingPage = () => {
                                         >
                                             {submitting ? t('booking.processing') : (
                                                 selectedSlot && dynamicPrice !== null
-                                                    ? t('booking.payAndConfirm', { price: dynamicPrice.toFixed(2) })
+                                                    ? t('booking.payAndConfirm', { price: `€${dynamicPrice.toFixed(2)}` })
                                                     : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot'))
                                             )}
                                         </button>

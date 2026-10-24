@@ -835,7 +835,7 @@ const LandingPage = () => {
                                             >
                                                 {submitting ? t('booking.processing') : (
                                                     selectedSlot && dynamicPrice !== null
-                                                        ? `Pay ${sym}${(dynamicPrice * rate).toFixed(2)} · Confirm Booking`
+                                                        ? t('booking.payAndConfirm', { price: `${sym}${(dynamicPrice * rate).toFixed(2)}` })
                                                         : (selectedSlot ? t('booking.confirmPayment') : t('booking.selectSlot'))
                                                 )}
                                             </button>
