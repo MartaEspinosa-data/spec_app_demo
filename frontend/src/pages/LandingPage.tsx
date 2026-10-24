@@ -764,9 +764,7 @@ const LandingPage = () => {
                                         >
                                             <option value="Conversación">🗣️ {t('booking.subjects.conversation')}</option>
                                             <option value="Curso Básico">📚 {t('booking.subjects.basic_course')}</option>
-                                            <option value="Grammar">📝 {t('booking.subjects.grammar') || 'Gramática'}</option>
                                             <option value="Examen DELE">🎓 {t('booking.subjects.dele') || 'Examen DELE'}</option>
-                                            <option value="Entrevista de Trabajo">💼 {t('booking.subjects.interview') || 'Entrevista de Trabajo'}</option>
                                         </select>
                                     </div>
 
